@@ -70,3 +70,7 @@ def plot_price_chart(data):
     plt.tight_layout()
     plt.grid(True)
     plt.show()
+
+if data is None or not isinstance(data, pd.DataFrame) or 'signal' not in data.columns:
+    st.error("No valid data available for chart.")
+    return None
