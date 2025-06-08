@@ -49,3 +49,23 @@ def plot_signals(data, signals, title=''):
     plt.tight_layout()
     plt.savefig('/mnt/data/backtesting_plot.png')
     plt.close()
+
+# backtesting.py
+
+import matplotlib.pyplot as plt
+
+def run_backtest(data):
+    buy_signals = data[data['Signal'] == 'BUY']
+    sell_signals = data[data['Signal'] == 'SELL']
+    
+    plt.figure(figsize=(14, 6))
+    plt.plot(data['Date'], data['Close'], label='Close Price', color='blue')
+    plt.scatter(buy_signals['Date'], buy_signals['Close'], label='Buy Signal', marker='^', color='green')
+    plt.scatter(sell_signals['Date'], sell_signals['Close'], label='Sell Signal', marker='v', color='red')
+    plt.title('Backtest of Buy/Sell Signals')
+    plt.xlabel('Date')
+    plt.ylabel('Price')
+    plt.legend()
+    plt.tight_layout()
+    plt.grid(True)
+    plt.show()
