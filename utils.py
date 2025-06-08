@@ -1,46 +1,34 @@
 
+import yfinance as yf
 import pandas as pd
-import plotly.graph_objs as go
+import matplotlib.pyplot as plt
 
-def plot_price_chart(data):
-    if data is None or not isinstance(data, pd.DataFrame) or 'signal' not in data.columns:
-        import streamlit as st
-        st.error("No valid data available for chart.")
-        return None
+def plot_price_chart(ticker_symbol):
+    try:
+        data = yf.Ticker(ticker_symbol).history(period="6mo", interval="1d")
+        if data.empty or 'Close' not in data.columns:
+            return "⚠️ No valid data for plotting."
 
-    fig = go.Figure()
+        data['Signal'] = None
+        for i in range(1, len(data) - 1):
+            if data['Close'].iloc[i] > data['Close'].iloc[i - 1] * 1.04:
+                data.at[data.index[i], 'Signal'] = 'BUY'
+            elif data['Close'].iloc[i] < data['Close'].iloc[i - 1] * 0.96:
+                data.at[data.index[i], 'Signal'] = 'SELL'
 
-    fig.add_trace(go.Scatter(
-        x=data.index,
-        y=data['Close'],
-        mode='lines',
-        name='Close Price'
-    ))
+        if 'Signal' not in data.columns:
+            return "⚠️ Signal column missing."
 
-    buy_signals = data[data['signal'] == 'BUY']
-    sell_signals = data[data['signal'] == 'SELL']
+        buy_signals = data[data['Signal'] == 'BUY']
+        sell_signals = data[data['Signal'] == 'SELL']
 
-    fig.add_trace(go.Scatter(
-        x=buy_signals.index,
-        y=buy_signals['Close'],
-        mode='markers',
-        name='Buy Signal',
-        marker=dict(color='green', size=10, symbol='triangle-up')
-    ))
+        fig, ax = plt.subplots(figsize=(10, 4))
+        ax.plot(data.index, data['Close'], label='Close Price', color='blue')
+        ax.scatter(buy_signals.index, buy_signals['Close'], label='BUY', color='green', marker='^')
+        ax.scatter(sell_signals.index, sell_signals['Close'], label='SELL', color='red', marker='v')
+        ax.legend()
+        ax.set_title(f"Price chart with signals for {ticker_symbol}")
+        return fig
 
-    fig.add_trace(go.Scatter(
-        x=sell_signals.index,
-        y=sell_signals['Close'],
-        mode='markers',
-        name='Sell Signal',
-        marker=dict(color='red', size=10, symbol='triangle-down')
-    ))
-
-    fig.update_layout(
-        title='Price Chart with Buy/Sell Signals',
-        xaxis_title='Date',
-        yaxis_title='Price',
-        template='plotly_white'
-    )
-
-    return fig
+    except Exception as e:
+        return f"❌ Chart error: {e}"
