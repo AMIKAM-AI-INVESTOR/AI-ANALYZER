@@ -50,3 +50,23 @@ def format_price(value):
         return f"${value:,.2f}"
     except:
         return value
+
+# utils.py
+
+import matplotlib.pyplot as plt
+
+def plot_price_chart(data):
+    buy_signals = data[data['Signal'] == 'BUY']
+    sell_signals = data[data['Signal'] == 'SELL']
+    
+    plt.figure(figsize=(14, 6))
+    plt.plot(data['Date'], data['Close'], label='Close Price', color='blue')
+    plt.scatter(buy_signals['Date'], buy_signals['Close'], label='Buy Signal', marker='^', color='green')
+    plt.scatter(sell_signals['Date'], sell_signals['Close'], label='Sell Signal', marker='v', color='red')
+    plt.title('Price Chart with Buy/Sell Signals')
+    plt.xlabel('Date')
+    plt.ylabel('Price')
+    plt.legend()
+    plt.tight_layout()
+    plt.grid(True)
+    plt.show()
