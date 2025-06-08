@@ -1,1 +1,0 @@
-# fundamentals.py - placeholder content
