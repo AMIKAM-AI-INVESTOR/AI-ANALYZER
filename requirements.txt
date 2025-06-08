@@ -1,0 +1,2 @@
+# Python dependencies
+# Placeholder content for requirements.txt
