@@ -1,0 +1,82 @@
+import pandas as pd
+import numpy as np
+
+def detect_head_and_shoulders(df, window=5):
+    """
+    Detect Head and Shoulders pattern in price data.
+
+    Returns:
+        str: Pattern detected or None.
+    """
+    if len(df) < window * 5:
+        return None
+
+    highs = df['High'].rolling(window=window).max()
+    pattern = []
+
+    for i in range(window * 2, len(highs) - window * 2):
+        l_shoulder = highs[i - window * 2:i - window].max()
+        head = highs[i - window:i + window].max()
+        r_shoulder = highs[i + window:i + window * 2].max()
+
+        if l_shoulder < head and r_shoulder < head and abs(l_shoulder - r_shoulder) / head < 0.1:
+            pattern.append((df.index[i], 'Head and Shoulders'))
+
+    return pattern if pattern else None
+
+def detect_ascending_triangle(df, lookback=20):
+    """
+    Detect ascending triangle pattern.
+
+    Returns:
+        str: Pattern detected or None.
+    """
+    highs = df['High'].rolling(window=lookback).max()
+    lows = df['Low'].rolling(window=lookback).min()
+
+    recent_high = highs.iloc[-1]
+    recent_lows = lows[-lookback:]
+
+    ascending = all(recent_lows[i] < recent_lows[i+1] for i in range(len(recent_lows) - 1))
+
+    if ascending and abs(highs.iloc[-1] - recent_high) < 0.02 * recent_high:
+        return [(df.index[-1], 'Ascending Triangle')]
+
+    return None
+
+def detect_bullish_channel(df, lookback=20):
+    """
+    Detect upward channel pattern.
+
+    Returns:
+        str: Pattern detected or None.
+    """
+    highs = df['High'][-lookback:]
+    lows = df['Low'][-lookback:]
+
+    trend_up = all(highs[i] < highs[i+1] for i in range(len(highs) - 1))
+    trend_low = all(lows[i] < lows[i+1] for i in range(len(lows) - 1))
+
+    if trend_up and trend_low:
+        return [(df.index[-1], 'Bullish Channel')]
+
+    return None
+
+def detect_patterns(df):
+    """
+    Wrapper to detect all patterns and return list.
+    """
+    patterns = []
+    hs = detect_head_and_shoulders(df)
+    if hs:
+        patterns.extend(hs)
+
+    at = detect_ascending_triangle(df)
+    if at:
+        patterns.extend(at)
+
+    ch = detect_bullish_channel(df)
+    if ch:
+        patterns.extend(ch)
+
+    return patterns
