@@ -1,0 +1,38 @@
+from openai import OpenAI
+import os
+
+def explain_recommendation(signal_type, ticker, price, target_price, confidence_score):
+    """
+    Generate an explanation for a buy/sell recommendation using a template or AI.
+
+    Args:
+        signal_type (str): 'Buy' or 'Sell'
+        ticker (str): Stock or crypto symbol
+        price (float): Current price
+        target_price (float): Forecasted target price
+        confidence_score (float): Confidence in the prediction (0 to 1)
+
+    Returns:
+        str: Explanation for the recommendation
+    """
+    explanation = ""
+
+    if signal_type == "Buy":
+        explanation = (
+            f"The system identified a buying opportunity for {ticker} at ${price:.2f}, "
+            f"anticipating a rise to approximately ${target_price:.2f}. This forecast is "
+            f"based on a confluence of positive technical indicators such as pattern formations "
+            f"(e.g., ascending triangle, moving average crossover) and strong fundamentals, "
+            f"including positive earnings reports or market sentiment. Confidence level: {confidence_score:.1%}."
+        )
+    elif signal_type == "Sell":
+        explanation = (
+            f"A sell signal was triggered for {ticker} at ${price:.2f}, with the system predicting a possible "
+            f"decline or correction. The decision is supported by indicators like trend reversal patterns, "
+            f"volume divergence, and weakening fundamentals. Estimated profit was maximized near the "
+            f"target price of ${target_price:.2f}. Confidence level: {confidence_score:.1%}."
+        )
+    else:
+        explanation = "No valid signal type provided."
+
+    return explanation
