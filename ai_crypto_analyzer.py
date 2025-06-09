@@ -1,49 +1,56 @@
-# ai_crypto_analyzer.py
-
 import streamlit as st
-from top10_data import get_top10_cryptos, get_top10_stocks
-from fundamentals import get_fundamentals
-from backtesting import run_backtest
-from utils import plot_price_chart
+from top10_data import get_top10_predictions
+from utils import fetch_price_history, detect_trade_signals
+from backtesting import run_backtesting
+from fundamentals import get_fundamental_data
+import plotly.graph_objects as go
 
-st.set_page_config(page_title="AI Crypto Analyzer", layout="wide")
-st.title("📈 AI Crypto & Stock Analyzer")
+st.set_page_config(layout="wide")
 
-col1, col2 = st.columns(2)
+st.title("AI Crypto & Stock Analyzer 📈🤖")
 
-with col1:
-    st.subheader("🔝 Top 10 Stocks")
-    top10_stocks = get_top10_stocks()
-    st.dataframe(top10_stocks, use_container_width=True)
+ticker = st.text_input("Enter Ticker Symbol (e.g., AAPL or BTC-USD):")
 
-with col2:
-    st.subheader("💰 Top 10 Cryptos")
-    top10_cryptos = get_top10_cryptos()
-    st.dataframe(top10_cryptos, use_container_width=True)
+if ticker:
+    df = fetch_price_history(ticker)
+    if not df.empty:
+        df = detect_trade_signals(df)
 
-st.markdown("---")
+        st.subheader("Price Chart with Buy/Sell Signals")
 
-asset = st.text_input("Enter stock or crypto symbol (e.g., AAPL or BTC-USD):")
+        fig = go.Figure()
+        fig.add_trace(go.Candlestick(
+            x=df.index,
+            open=df['Open'],
+            high=df['High'],
+            low=df['Low'],
+            close=df['Close'],
+            name='Candlestick'
+        ))
 
-if asset:
-    st.subheader(f"📊 Analysis for {asset.upper()}")
+        buy_signals = df[df['Signal'] == 'Buy']
+        sell_signals = df[df['Signal'] == 'Sell']
 
-    chart = plot_price_chart(asset)
-    if chart:
-        st.plotly_chart(chart, use_container_width=True)
+        fig.add_trace(go.Scatter(x=buy_signals.index, y=buy_signals['Close'],
+                                 mode='markers', marker=dict(color='green', size=10),
+                                 name='Buy Signal'))
+
+        fig.add_trace(go.Scatter(x=sell_signals.index, y=sell_signals['Close'],
+                                 mode='markers', marker=dict(color='red', size=10),
+                                 name='Sell Signal'))
+
+        st.plotly_chart(fig, use_container_width=True)
+
+        st.subheader("Backtesting Results")
+        results = run_backtesting(df)
+        st.dataframe(results)
+
+        st.subheader("Fundamental Data")
+        fund_data = get_fundamental_data(ticker)
+        st.json(fund_data)
     else:
-        st.warning("Chart data could not be retrieved.")
+        st.error("No data found for the provided ticker.")
 
-    st.markdown("### 🔍 Fundamental Analysis")
-    fundamentals = get_fundamentals(asset)
-    if fundamentals is not None:
-        st.write(fundamentals)
-    else:
-        st.info("Fundamental data not available.")
-
-    st.markdown("### 🧪 Backtest Strategy")
-    backtest_result = run_backtest(asset)
-    if backtest_result:
-        st.write(backtest_result)
-    else:
-        st.info("Backtest data not available or failed to load.")
+st.sidebar.header("Top 10 Predictions")
+top10_df = get_top10_predictions()
+st.sidebar.dataframe(top10_df)
