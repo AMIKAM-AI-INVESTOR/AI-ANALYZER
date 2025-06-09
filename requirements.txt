@@ -1,5 +1,9 @@
-matplotlib
 streamlit
-pandas
 yfinance
+pandas
+numpy
+matplotlib
 plotly
+requests
+datetime
+scikit-learn
