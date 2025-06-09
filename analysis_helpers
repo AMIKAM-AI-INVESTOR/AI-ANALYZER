@@ -1,0 +1,60 @@
+import numpy as np
+import pandas as pd
+
+def calculate_moving_averages(df, windows=[20, 50, 200]):
+    """
+    Add moving average columns to the DataFrame for the given windows.
+
+    Args:
+        df (pd.DataFrame): DataFrame with price data (must include 'Close' column).
+        windows (list): List of integers representing the window sizes for MA.
+
+    Returns:
+        pd.DataFrame: Original DataFrame with added MA columns.
+    """
+    for window in windows:
+        df[f"MA{window}"] = df["Close"].rolling(window=window).mean()
+    return df
+
+def add_rsi(df, period=14):
+    """
+    Add Relative Strength Index (RSI) to the DataFrame.
+
+    Args:
+        df (pd.DataFrame): DataFrame with price data (must include 'Close').
+        period (int): Look-back period for RSI calculation.
+
+    Returns:
+        pd.DataFrame: Original DataFrame with 'RSI' column added.
+    """
+    delta = df['Close'].diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+
+    avg_gain = gain.rolling(window=period).mean()
+    avg_loss = loss.rolling(window=period).mean()
+
+    rs = avg_gain / avg_loss
+    df['RSI'] = 100 - (100 / (1 + rs))
+
+    return df
+
+def add_macd(df, short_window=12, long_window=26, signal_window=9):
+    """
+    Add MACD (Moving Average Convergence Divergence) indicator.
+
+    Args:
+        df (pd.DataFrame): DataFrame with 'Close'.
+        short_window (int): Short EMA period.
+        long_window (int): Long EMA period.
+        signal_window (int): Signal line period.
+
+    Returns:
+        pd.DataFrame: DataFrame with MACD, Signal Line, and Histogram columns.
+    """
+    short_ema = df['Close'].ewm(span=short_window, adjust=False).mean()
+    long_ema = df['Close'].ewm(span=long_window, adjust=False).mean()
+    df['MACD'] = short_ema - long_ema
+    df['Signal_Line'] = df['MACD'].ewm(span=signal_window, adjust=False).mean()
+    df['MACD_Hist'] = df['MACD'] - df['Signal_Line']
+    return df
