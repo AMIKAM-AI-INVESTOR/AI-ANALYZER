@@ -1,0 +1,22 @@
+import yfinance as yf
+import pandas as pd
+
+def get_detailed_fundamentals(ticker_symbol):
+    try:
+        ticker = yf.Ticker(ticker_symbol)
+        info = ticker.info
+
+        keys_of_interest = [
+            "longName", "sector", "industry", "country", "fullTimeEmployees",
+            "marketCap", "trailingPE", "forwardPE", "priceToBook", "pegRatio",
+            "beta", "dividendYield", "payoutRatio", "earningsQuarterlyGrowth",
+            "revenueGrowth", "grossMargins", "operatingMargins", "profitMargins",
+            "returnOnAssets", "returnOnEquity", "debtToEquity"
+        ]
+
+        fundamentals = {key: info.get(key, None) for key in keys_of_interest}
+
+        return pd.DataFrame.from_dict(fundamentals, orient='index', columns=['Value'])
+    except Exception as e:
+        print(f"Error fetching detailed fundamentals for {ticker_symbol}: {e}")
+        return pd.DataFrame()
