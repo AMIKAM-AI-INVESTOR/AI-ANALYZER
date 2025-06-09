@@ -1,0 +1,40 @@
+import yfinance as yf
+import pandas as pd
+
+class RealTimePriceFetcher:
+    def __init__(self, ticker_symbol):
+        self.ticker_symbol = ticker_symbol
+        self.ticker = yf.Ticker(ticker_symbol)
+
+    def get_current_price(self):
+        try:
+            data = self.ticker.history(period="1d", interval="1m")
+            if data.empty:
+                print(f"No data for {self.ticker_symbol}")
+                return None
+            latest_price = data['Close'].iloc[-1]
+            return latest_price
+        except Exception as e:
+            print(f"Error fetching real-time price for {self.ticker_symbol}: {e}")
+            return None
+
+    def get_summary_info(self):
+        try:
+            info = self.ticker.info
+            return {
+                "symbol": self.ticker_symbol,
+                "currentPrice": info.get("currentPrice"),
+                "marketCap": info.get("marketCap"),
+                "sector": info.get("sector"),
+                "industry": info.get("industry"),
+                "previousClose": info.get("previousClose"),
+                "open": info.get("open"),
+            }
+        except Exception as e:
+            print(f"Error fetching summary info for {self.ticker_symbol}: {e}")
+            return {}
+
+# Example usage:
+# fetcher = RealTimePriceFetcher("AAPL")
+# print(fetcher.get_current_price())
+# print(fetcher.get_summary_info())
