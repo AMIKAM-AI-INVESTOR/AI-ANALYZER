@@ -1,36 +1,24 @@
-
-import yfinance as yf
 import pandas as pd
 
-def run_backtest(ticker_symbol):
-    try:
-        ticker = yf.Ticker(ticker_symbol)
-        hist = ticker.history(period="6mo", interval="1d")
-        if hist.empty:
-            return "⚠️ No historical data available."
+def backtest_signals(df):
+    df = df.copy()
+    positions = []
+    trades = []
 
-        data = hist.copy()
-        data['Signal'] = None
+    for i in range(len(df)):
+        if df['Signal'].iloc[i] == 'Buy':
+            positions.append((df.index[i], df['Close'].iloc[i]))
+        elif df['Signal'].iloc[i] == 'Sell' and positions:
+            buy_date, buy_price = positions.pop(0)
+            sell_date = df.index[i]
+            sell_price = df['Close'].iloc[i]
+            return_pct = ((sell_price - buy_price) / buy_price) * 100
+            trades.append({
+                "Buy Date": buy_date,
+                "Sell Date": sell_date,
+                "Buy Price": buy_price,
+                "Sell Price": sell_price,
+                "Return (%)": round(return_pct, 2)
+            })
 
-        for i in range(1, len(data) - 1):
-            if data['Close'].iloc[i] > data['Close'].iloc[i - 1] * 1.04:
-                data.at[data.index[i], 'Signal'] = 'BUY'
-            elif data['Close'].iloc[i] < data['Close'].iloc[i - 1] * 0.96:
-                data.at[data.index[i], 'Signal'] = 'SELL'
-
-        if 'Signal' not in data.columns or data['Signal'].isnull().all():
-            return "⚠️ No valid trade signals found."
-
-        buy_signals = data[data['Signal'] == 'BUY']
-        sell_signals = data[data['Signal'] == 'SELL']
-
-        results = {
-            "Total BUY signals": len(buy_signals),
-            "Total SELL signals": len(sell_signals),
-            "BUY dates": buy_signals.index.strftime('%Y-%m-%d').tolist(),
-            "SELL dates": sell_signals.index.strftime('%Y-%m-%d').tolist(),
-        }
-        return results
-
-    except Exception as e:
-        return f"❌ Error during backtest: {e}"
+    return pd.DataFrame(trades)
