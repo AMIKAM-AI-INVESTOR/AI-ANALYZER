@@ -1,34 +1,52 @@
-
 import yfinance as yf
 import pandas as pd
-import matplotlib.pyplot as plt
+import numpy as np
 
-def plot_price_chart(ticker_symbol):
+def fetch_price_history(ticker_symbol, period="6mo", interval="1d"):
     try:
-        data = yf.Ticker(ticker_symbol).history(period="6mo", interval="1d")
-        if data.empty or 'Close' not in data.columns:
-            return "⚠️ No valid data for plotting."
-
-        data['Signal'] = None
-        for i in range(1, len(data) - 1):
-            if data['Close'].iloc[i] > data['Close'].iloc[i - 1] * 1.04:
-                data.at[data.index[i], 'Signal'] = 'BUY'
-            elif data['Close'].iloc[i] < data['Close'].iloc[i - 1] * 0.96:
-                data.at[data.index[i], 'Signal'] = 'SELL'
-
-        if 'Signal' not in data.columns:
-            return "⚠️ Signal column missing."
-
-        buy_signals = data[data['Signal'] == 'BUY']
-        sell_signals = data[data['Signal'] == 'SELL']
-
-        fig, ax = plt.subplots(figsize=(10, 4))
-        ax.plot(data.index, data['Close'], label='Close Price', color='blue')
-        ax.scatter(buy_signals.index, buy_signals['Close'], label='BUY', color='green', marker='^')
-        ax.scatter(sell_signals.index, sell_signals['Close'], label='SELL', color='red', marker='v')
-        ax.legend()
-        ax.set_title(f"Price chart with signals for {ticker_symbol}")
-        return fig
-
+        ticker = yf.Ticker(ticker_symbol)
+        hist = ticker.history(period=period, interval=interval)
+        return hist
     except Exception as e:
-        return f"❌ Chart error: {e}"
+        print(f"Error fetching data for {ticker_symbol}: {e}")
+        return pd.DataFrame()
+
+def detect_trade_signals(df, threshold=0.04):
+    df = df.copy()
+    df['Signal'] = None
+
+    for i in range(1, len(df) - 1):
+        if df['Close'].iloc[i] > df['Close'].iloc[i - 1] * (1 + threshold):
+            df.at[df.index[i], 'Signal'] = 'Buy'
+        elif df['Close'].iloc[i] < df['Close'].iloc[i - 1] * (1 - threshold):
+            df.at[df.index[i], 'Signal'] = 'Sell'
+
+    return df
+
+def calculate_return(df, buy_signal='Buy', sell_signal='Sell'):
+    df = df.copy()
+    positions = []
+    returns = []
+
+    for i in range(len(df)):
+        if df['Signal'].iloc[i] == buy_signal:
+            positions.append((df.index[i], df['Close'].iloc[i]))
+        elif df['Signal'].iloc[i] == sell_signal and positions:
+            buy_date, buy_price = positions.pop(0)
+            sell_price = df['Close'].iloc[i]
+            return_pct = ((sell_price - buy_price) / buy_price) * 100
+            returns.append({
+                "Buy Date": buy_date,
+                "Sell Date": df.index[i],
+                "Buy Price": buy_price,
+                "Sell Price": sell_price,
+                "Return (%)": return_pct
+            })
+
+    return pd.DataFrame(returns)
+
+def format_price(value):
+    try:
+        return f"${value:,.2f}"
+    except:
+        return value
