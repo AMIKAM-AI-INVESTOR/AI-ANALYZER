@@ -24,7 +24,7 @@ def generate_signals(prices):
 
 def calculate_risk(prices, forecast_return):
     volatility = prices.pct_change().rolling(window=20).std().iloc[-1]
-    if pd.isna(volatility) or volatility == 0:
+   if volatility is None or np.isnan(volatility) or volatility == 0:
         return "גבוה"  # אם אין מספיק נתונים או תנודתיות לא ניתנת לחישוב
     reward_risk_ratio = abs(forecast_return / volatility)
 
