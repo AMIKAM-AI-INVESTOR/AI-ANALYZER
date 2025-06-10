@@ -25,9 +25,8 @@ def get_sp500_symbols():
 
 def get_top_crypto_symbols():
     return [
-        "BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD", "XRP-USD", "DOGE-USD", "ADA-USD",
-        "AVAX-USD", "LINK-USD", "MATIC-USD", "DOT-USD", "SHIB-USD",
-        "LTC-USD", "ATOM-USD", "TRX-USD", "NEAR-USD", "UNI7083-USD", "XLM-USD", "ETC-USD"
+        "BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD", "XRP-USD",
+        "DOGE-USD", "ADA-USD", "AVAX-USD", "LINK-USD", "MATIC-USD"
     ]
 
 def generate_signals(prices):
