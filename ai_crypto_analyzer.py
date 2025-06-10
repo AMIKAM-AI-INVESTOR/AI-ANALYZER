@@ -12,9 +12,7 @@ from fundamentals import get_fundamental_data
 st.set_page_config(layout="wide", page_title="AI Stock & Crypto Analyzer")
 st.title("AI Crypto & Stock Analyzer 📈🤖")
 
-# ---------------- Top 10 Table ---------------- #
-st.header("🧠 טבלת Top 10 - תחזיות חכמות")
-
+# ---------------- פונקציות עזר ---------------- #
 def generate_signals(prices):
     short_ma = prices.rolling(window=5).mean()
     long_ma = prices.rolling(window=20).mean()
@@ -25,124 +23,102 @@ def generate_signals(prices):
 def calculate_risk(prices, forecast_return):
     volatility_series = prices.pct_change().rolling(window=20).std()
     volatility = volatility_series.iloc[-1]
-
     try:
         volatility = float(volatility)
     except (TypeError, ValueError):
         return "גבוה"
-
     if np.isnan(volatility) or volatility == 0:
         return "גבוה"
-
-    reward_risk_ratio = abs(forecast_return / volatility)
-
-    if reward_risk_ratio >= 3:
+    ratio = abs(forecast_return / volatility)
+    if ratio >= 3:
         return "נמוך"
-    elif reward_risk_ratio >= 1.5:
+    elif ratio >= 1.5:
         return "בינוני"
     else:
         return "גבוה"
 
 def forecast_price_change(prices):
-    forecast_return = np.random.uniform(0.02, 0.25)
-    forecast_days = np.random.randint(5, 20)
-    return round(forecast_return * 100, 2), forecast_days
+    r = np.random.uniform(0.02, 0.25)
+    days = np.random.randint(5, 20)
+    return round(r * 100, 2), days
 
 def calculate_confidence_and_success(symbol):
-    confidence_score = np.random.randint(60, 95)
-    success_rate = np.random.randint(55, 90)
-    return confidence_score, success_rate
+    return np.random.randint(60, 95), np.random.randint(55, 90)
 
+# ---------------- איסוף נתונים ---------------- #
 assets = {
-    "AAPL": "מניה",
-    "MSFT": "מניה",
-    "GOOGL": "מניה",
-    "ETH-USD": "קריפטו",
-    "BTC-USD": "קריפטו",
-    "SOL-USD": "קריפטו"
+    "AAPL": "מניה", "MSFT": "מניה", "GOOGL": "מניה",
+    "ETH-USD": "קריפטו", "BTC-USD": "קריפטו", "SOL-USD": "קריפטו"
 }
 
-investor_type = st.sidebar.selectbox("סוג משקיע", ["סולידי", "בינוני", "אגרסיבי"])
-risk_map = {
-    "סולידי": ["נמוך"],
-    "בינוני": ["נמוך", "בינוני"],
-    "אגרסיבי": ["נמוך", "בינוני", "גבוה"]
-}
-
-results = []
-
-for symbol, asset_type in assets.items():
-    data = yf.download(symbol, period="6mo", interval="1d", progress=False)
-    if data.empty:
-        continue
-    prices = data['Close']
-    buy_signal, sell_signal = generate_signals(prices)
-    forecast_return, forecast_days = forecast_price_change(prices)
-    risk_level = calculate_risk(prices, forecast_return / 100)
-    if risk_level not in risk_map[investor_type]:
-        continue
-    confidence_score, success_rate = calculate_confidence_and_success(symbol)
-    last_signal_time = prices.index[-1].strftime("%Y-%m-%d %H:%M")
-
-    results.append({
+records = []
+for symbol, asset in assets.items():
+    df = yf.download(symbol, period="6mo", interval="1d", progress=False)
+    if df.empty: continue
+    close = df['Close']
+    _, _ = generate_signals(close)
+    forecast_pct, forecast_days = forecast_price_change(close)
+    risk = calculate_risk(close, forecast_pct / 100)
+    confidence, success = calculate_confidence_and_success(symbol)
+    timestamp = close.index[-1].strftime("%Y-%m-%d %H:%M")
+    records.append({
         "סימול": symbol,
-        "סוג": asset_type,
-        "תחזית עלייה (%)": forecast_return,
+        "סוג": asset,
+        "תחזית (%)": forecast_pct,
         "יעד (ימים)": forecast_days,
-        "רמת סיכון": risk_level,
-        "ציון ביטחון": confidence_score,
-        "אחוז הצלחה היסטורי": success_rate,
-        "חותמת זמן": last_signal_time
+        "רמות סיכון": risk,
+        "ביטחון": confidence,
+        "שיעור הצלחה (%)": success,
+        "תאריך איתות": timestamp
     })
 
-if results:
-    df = pd.DataFrame(results)
-    df = df.sort_values(by="תחזית עלייה (%)", ascending=False).head(10)
-    st.dataframe(df.reset_index(drop=True), use_container_width=True)
+df_all = pd.DataFrame(records)
+
+# ---------------- הצגת Top 10 לכל קטגוריה ---------------- #
+st.header("🧠 Top 10 מניות")
+df_stocks = df_all[df_all['סוג'] == "מניה"]
+if not df_stocks.empty:
+    df_stocks = df_stocks.drop_duplicates(subset='סימול')
+    st.dataframe(df_stocks.sort_values("תחזית (%)", ascending=False).head(10), use_container_width=True)
 else:
-    st.warning("לא נמצאו נכסים מתאימים לפי הסינון.")
+    st.write("אין נתונים למניות")
 
-# ---------------- Search & Chart ---------------- #
+st.header("🧠 Top 10 מטבעות קריפטו")
+df_crypto = df_all[df_all['סוג'] == "קריפטו"]
+if not df_crypto.empty:
+    df_crypto = df_crypto.drop_duplicates(subset='סימול')
+    st.dataframe(df_crypto.sort_values("תחזית (%)", ascending=False).head(10), use_container_width=True)
+else:
+    st.write("אין נתונים לקריפטו")
+
+# ---------------- חיפוש וניתוח אישי ---------------- #
 st.markdown("---")
-st.header("🔍 ניתוח אישי לפי סימול")
-
-ticker = st.text_input("הזן סימול (למשל AAPL או BTC-USD):")
+st.header("🔍 חיפוש וניתוח לפי סימול")
+ticker = st.text_input("לדוגמה: AAPL או BTC-USD")
 
 if ticker:
     df = fetch_price_history(ticker)
     if not df.empty:
         df = detect_trade_signals(df)
-        st.subheader("📊 גרף נרות יפניים עם איתותים")
-
+        st.subheader("📊 גרף נרות + איתותים")
         fig = go.Figure()
         fig.add_trace(go.Candlestick(
-            x=df.index,
-            open=df['Open'],
-            high=df['High'],
-            low=df['Low'],
-            close=df['Close'],
-            name='Candlestick'
+            x=df.index, open=df['Open'], high=df['High'],
+            low=df['Low'], close=df['Close'], name="נרות"
         ))
-
-        buy_signals = df[df['Signal'] == 'Buy']
-        sell_signals = df[df['Signal'] == 'Sell']
-
-        fig.add_trace(go.Scatter(x=buy_signals.index, y=buy_signals['Close'],
-                                 mode='markers', marker=dict(color='green', size=10),
-                                 name='Buy Signal'))
-
-        fig.add_trace(go.Scatter(x=sell_signals.index, y=sell_signals['Close'],
-                                 mode='markers', marker=dict(color='red', size=10),
-                                 name='Sell Signal'))
-
+        buy = df[df['Signal'] == 'Buy']
+        sell = df[df['Signal'] == 'Sell']
+        fig.add_trace(go.Scatter(x=buy.index, y=buy['Close'], mode='markers',
+                                 marker=dict(color='green', size=10), name='Buy'))
+        fig.add_trace(go.Scatter(x=sell.index, y=sell['Close'], mode='markers',
+                                 marker=dict(color='red', size=10), name='Sell'))
         st.plotly_chart(fig, use_container_width=True)
 
-        st.subheader("🔁 תוצאות Backtesting")
-        results = run_backtesting(df)
-        st.dataframe(results)
+        st.subheader("🔁 Backtesting")
+        res = run_backtesting(df)
+        st.dataframe(res)
 
         st.subheader("📋 נתונים פנדומנטליים")
-        fund_data = get_fundamental_data(ticker)
-        st.json(fund_data)
+        st.json(get_fundamental_data(ticker))
     else:
-        st.error("לא נמצאו נתונים עבור הסימול המבוקש.")
+        st.error("לא נמצאו נתונים עבור הסימול.")
