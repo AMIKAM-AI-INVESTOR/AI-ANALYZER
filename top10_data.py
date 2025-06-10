@@ -1,37 +1,33 @@
+import yfinance as yf
 import pandas as pd
+import datetime
+
+stock_symbols = ["AAPL", "NVDA", "TSLA", "AMZN", "META", "MSFT", "GOOGL", "ON", "COST", "AMD"]
+crypto_symbols = ["BTC-USD", "ETH-USD", "SOL-USD", "AVAX-USD", "BNB-USD", "ADA-USD", "XRP-USD", "DOGE-USD", "LTC-USD", "MATIC-USD"]
 
 def get_top10_predictions():
-    stocks = [
-        {"symbol": "AAPL", "expected_change": "12%", "target_time": "9 ימים"},
-        {"symbol": "NVDA", "expected_change": "11%", "target_time": "10 ימים"},
-        {"symbol": "TSLA", "expected_change": "10%", "target_time": "6 ימים"},
-        {"symbol": "AMZN", "expected_change": "9%", "target_time": "12 ימים"},
-        {"symbol": "META", "expected_change": "8%", "target_time": "7 ימים"},
-        {"symbol": "MSFT", "expected_change": "7%", "target_time": "5 ימים"},
-        {"symbol": "GOOGL", "expected_change": "6%", "target_time": "8 ימים"},
-        {"symbol": "ON", "expected_change": "6%", "target_time": "9 ימים"},
-        {"symbol": "COST", "expected_change": "5%", "target_time": "10 ימים"},
-        {"symbol": "AMD", "expected_change": "5%", "target_time": "6 ימים"},
-    ]
+    today = datetime.datetime.today().date()
+    end_date = today
+    start_date = today - datetime.timedelta(days=90)
 
-    cryptos = [
-        {"symbol": "BTC-USD", "expected_change": "14%", "target_time": "10 ימים"},
-        {"symbol": "ETH-USD", "expected_change": "11%", "target_time": "7 ימים"},
-        {"symbol": "SOL-USD", "expected_change": "9%", "target_time": "6 ימים"},
-        {"symbol": "AVAX-USD", "expected_change": "8%", "target_time": "8 ימים"},
-        {"symbol": "BNB-USD", "expected_change": "7%", "target_time": "12 ימים"},
-        {"symbol": "ADA-USD", "expected_change": "6%", "target_time": "9 ימים"},
-        {"symbol": "XRP-USD", "expected_change": "6%", "target_time": "10 ימים"},
-        {"symbol": "DOGE-USD", "expected_change": "5%", "target_time": "5 ימים"},
-        {"symbol": "LTC-USD", "expected_change": "5%", "target_time": "7 ימים"},
-        {"symbol": "MATIC-USD", "expected_change": "4%", "target_time": "6 ימים"},
-    ]
+    def analyze(symbols, asset_type):
+        predictions = []
+        for symbol in symbols:
+            try:
+                df = yf.download(symbol, start=start_date, end=end_date)
+                if df.empty or 'Close' not in df.columns:
+                    continue
+                change = (df['Close'].iloc[-1] - df['Close'].iloc[0]) / df['Close'].iloc[0]
+                target_days = int((end_date - start_date).days)
+                predictions.append({
+                    "symbol": symbol,
+                    "expected_change": f"{round(change * 100)}%",
+                    "target_time": f"{target_days} ימים"
+                })
+            except Exception as e:
+                print(f"Error processing {symbol}: {e}")
+        return pd.DataFrame([{"type": asset_type, **row} for _, row in pd.DataFrame(predictions).iterrows()])
 
-    stock_df = pd.DataFrame(stocks)
-    crypto_df = pd.DataFrame(cryptos)
-
-    return pd.concat([
-        pd.DataFrame({"type": "Stock", **row}) for _, row in stock_df.iterrows()
-    ] + [
-        pd.DataFrame({"type": "Crypto", **row}) for _, row in crypto_df.iterrows()
-    ])
+    stock_df = analyze(stock_symbols, "Stock")
+    crypto_df = analyze(crypto_symbols, "Crypto")
+    return pd.concat([stock_df, crypto_df], ignore_index=True)
