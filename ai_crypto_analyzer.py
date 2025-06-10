@@ -14,7 +14,7 @@ from fundamentals import get_fundamental_data
 st.set_page_config(layout="wide", page_title="AI Stock & Crypto Analyzer")
 st.title("AI Crypto & Stock Analyzer 📈🤖")
 
-# ========== פונקציות עזר ========== #
+# === עזר ===
 def get_sp500_symbols():
     url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
     html = requests.get(url).text
@@ -33,9 +33,10 @@ def get_top_crypto_symbols():
 def generate_signals(prices):
     short_ma = prices.rolling(window=5).mean()
     long_ma = prices.rolling(window=20).mean()
-    buy_signal = (short_ma > long_ma) & (short_ma.shift(1) <= long_ma.shift(1))
-    sell_signal = (short_ma < long_ma) & (short_ma.shift(1) >= long_ma.shift(1))
-    return buy_signal, sell_signal
+    return (
+        (short_ma > long_ma) & (short_ma.shift(1) <= long_ma.shift(1)),
+        (short_ma < long_ma) & (short_ma.shift(1) >= long_ma.shift(1))
+    )
 
 def calculate_risk(prices, forecast_return):
     volatility = prices.pct_change().rolling(window=20).std().iloc[-1]
@@ -46,12 +47,7 @@ def calculate_risk(prices, forecast_return):
     if np.isnan(volatility) or volatility == 0:
         return "גבוה"
     ratio = abs(forecast_return / volatility)
-    if ratio >= 3:
-        return "נמוך"
-    elif ratio >= 1.5:
-        return "בינוני"
-    else:
-        return "גבוה"
+    return "נמוך" if ratio >= 3 else "בינוני" if ratio >= 1.5 else "גבוה"
 
 def forecast_price_change(prices):
     return round(np.random.uniform(0.02, 0.25) * 100, 2), np.random.randint(5, 20)
@@ -59,24 +55,35 @@ def forecast_price_change(prices):
 def calculate_confidence_and_success(symbol):
     return np.random.randint(60, 95), np.random.randint(55, 90)
 
+def get_current_price(symbol):
+    try:
+        ticker = yf.Ticker(symbol)
+        price = ticker.info.get("regularMarketPrice", None)
+        return round(price, 2) if price else None
+    except:
+        return None
+
+# === ניתוח נכסים ===
 def analyze_assets(symbols, asset_type):
     results = []
     for symbol in symbols:
         try:
-            data = yf.download(symbol, period="6mo", interval="1d", progress=False)
+            price = get_current_price(symbol)
+            if price is None:
+                continue
+            data = yf.download(symbol, period="3mo", interval="1d", progress=False)
             if data.empty or len(data) < 30:
                 continue
             close = data['Close']
-            current_price = round(float(close.iloc[-1]), 2)
             forecast_pct, forecast_days = forecast_price_change(close)
-            target_price = round(current_price * (1 + forecast_pct / 100), 2)
+            target_price = round(price * (1 + forecast_pct / 100), 2)
             risk = calculate_risk(close, forecast_pct / 100)
             confidence, success = calculate_confidence_and_success(symbol)
             timestamp = close.index[-1].strftime("%Y-%m-%d %H:%M")
             results.append({
                 "סימול": symbol,
                 "סוג": asset_type,
-                "שער נוכחי": current_price,
+                "שער נוכחי": price,
                 "תחזית (%)": forecast_pct,
                 "שער תחזית": target_price,
                 "יעד (ימים)": forecast_days,
@@ -89,35 +96,33 @@ def analyze_assets(symbols, asset_type):
             continue
     return results
 
-
-# ========== שליפת נתונים ========== #
-with st.spinner("טוען מניות S&P 500..."):
+# === שליפת נתונים ועדכון טבלאות ===
+with st.spinner("🔄 טוען מניות S&P 500..."):
     stock_symbols = get_sp500_symbols()
-with st.spinner("טוען מטבעות קריפטו..."):
+with st.spinner("🔄 טוען מטבעות קריפטו..."):
     crypto_symbols = get_top_crypto_symbols()
 
 stock_data = analyze_assets(stock_symbols, "מניה")
 crypto_data = analyze_assets(crypto_symbols, "קריפטו")
 
-# ========== הצגת טבלאות ========== #
 st.header("🧠 Top 10 מניות")
 df_stocks = pd.DataFrame(stock_data)
 if not df_stocks.empty:
     st.dataframe(df_stocks.sort_values("תחזית (%)", ascending=False).head(10), use_container_width=True)
 else:
-    st.write("לא נמצאו מניות.")
+    st.warning("לא נמצאו מניות זמינות להצגה.")
 
 st.header("🧠 Top 10 מטבעות קריפטו")
 df_crypto = pd.DataFrame(crypto_data)
 if not df_crypto.empty:
     st.dataframe(df_crypto.sort_values("תחזית (%)", ascending=False).head(10), use_container_width=True)
 else:
-    st.write("לא נמצאו מטבעות קריפטו.")
+    st.warning("לא נמצאו מטבעות זמינים להצגה.")
 
-# ========== חיפוש סימול אישי ========== #
+# === ניתוח סימול אישי ===
 st.markdown("---")
 st.header("🔍 חיפוש וניתוח לפי סימול")
-ticker = st.text_input("לדוגמה: AAPL או BTC-USD")
+ticker = st.text_input("הזן סימול (למשל AAPL או BTC-USD):")
 
 if ticker:
     df = fetch_price_history(ticker)
@@ -141,4 +146,4 @@ if ticker:
         st.subheader("📋 נתונים פנדומנטליים")
         st.json(get_fundamental_data(ticker))
     else:
-        st.error("לא נמצאו נתונים עבור הסימול.")
+        st.error("⚠️ לא נמצאו נתונים עבור הסימול.")
