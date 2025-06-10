@@ -1,24 +1,29 @@
 import pandas as pd
 
-def backtest_signals(df):
+def run_backtesting(df):
     df = df.copy()
-    positions = []
-    trades = []
+    df = df.dropna(subset=['Signal'])
 
-    for i in range(len(df)):
-        if df['Signal'].iloc[i] == 'Buy':
-            positions.append((df.index[i], df['Close'].iloc[i]))
-        elif df['Signal'].iloc[i] == 'Sell' and positions:
-            buy_date, buy_price = positions.pop(0)
-            sell_date = df.index[i]
-            sell_price = df['Close'].iloc[i]
+    buy_signals = df[df['Signal'] == 'Buy']
+    sell_signals = df[df['Signal'] == 'Sell']
+
+    trades = []
+    position = None
+
+    for idx, row in df.iterrows():
+        if row['Signal'] == 'Buy' and position is None:
+            position = (idx, row['Close'])
+        elif row['Signal'] == 'Sell' and position:
+            buy_date, buy_price = position
+            sell_price = row['Close']
             return_pct = ((sell_price - buy_price) / buy_price) * 100
             trades.append({
                 "Buy Date": buy_date,
-                "Sell Date": sell_date,
+                "Sell Date": idx,
                 "Buy Price": buy_price,
                 "Sell Price": sell_price,
                 "Return (%)": round(return_pct, 2)
             })
+            position = None
 
     return pd.DataFrame(trades)
