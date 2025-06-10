@@ -3,8 +3,8 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 from datetime import datetime
-
 import plotly.graph_objects as go
+
 from utils import fetch_price_history, detect_trade_signals
 from backtesting import run_backtesting
 from fundamentals import get_fundamental_data
@@ -23,11 +23,17 @@ def generate_signals(prices):
     return buy_signal, sell_signal
 
 def calculate_risk(prices, forecast_return):
-    volatility = prices.pct_change().rolling(window=20).std().iloc[-1]
-    
-    if volatility is None or np.isnan(volatility) or volatility == 0:
+    volatility_series = prices.pct_change().rolling(window=20).std()
+    volatility = volatility_series.iloc[-1]
+
+    try:
+        volatility = float(volatility)
+    except (TypeError, ValueError):
         return "גבוה"
-    
+
+    if np.isnan(volatility) or volatility == 0:
+        return "גבוה"
+
     reward_risk_ratio = abs(forecast_return / volatility)
 
     if reward_risk_ratio >= 3:
@@ -36,8 +42,6 @@ def calculate_risk(prices, forecast_return):
         return "בינוני"
     else:
         return "גבוה"
-
-
 
 def forecast_price_change(prices):
     forecast_return = np.random.uniform(0.02, 0.25)
