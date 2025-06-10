@@ -68,22 +68,28 @@ def analyze_assets(symbols, asset_type):
     results = []
     for symbol in symbols:
         try:
-            price = get_current_price(symbol)
+            ticker = yf.Ticker(symbol)
+            price = ticker.info.get("regularMarketPrice", None)
             if price is None:
                 continue
+            name = ticker.info.get("shortName", symbol)
+
             data = yf.download(symbol, period="3mo", interval="1d", progress=False)
             if data.empty or len(data) < 30:
                 continue
+
             close = data['Close']
             forecast_pct, forecast_days = forecast_price_change(close)
             target_price = round(price * (1 + forecast_pct / 100), 2)
             risk = calculate_risk(close, forecast_pct / 100)
             confidence, success = calculate_confidence_and_success(symbol)
             timestamp = close.index[-1].strftime("%Y-%m-%d %H:%M")
+
             results.append({
                 "סימול": symbol,
+                "שם מלא": name,
                 "סוג": asset_type,
-                "שער נוכחי": price,
+                "שער נוכחי": round(price, 2),
                 "תחזית (%)": forecast_pct,
                 "שער תחזית": target_price,
                 "יעד (ימים)": forecast_days,
