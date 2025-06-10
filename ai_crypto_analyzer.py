@@ -67,8 +67,7 @@ def analyze_assets(symbols, asset_type):
             if data.empty or len(data) < 30:
                 continue
             close = data['Close']
-            current_price = close.iloc[-1]
-            generate_signals(close)
+            current_price = round(float(close.iloc[-1]), 2)
             forecast_pct, forecast_days = forecast_price_change(close)
             target_price = round(current_price * (1 + forecast_pct / 100), 2)
             risk = calculate_risk(close, forecast_pct / 100)
@@ -77,7 +76,7 @@ def analyze_assets(symbols, asset_type):
             results.append({
                 "סימול": symbol,
                 "סוג": asset_type,
-                "שער נוכחי": round(current_price, 2),
+                "שער נוכחי": current_price,
                 "תחזית (%)": forecast_pct,
                 "שער תחזית": target_price,
                 "יעד (ימים)": forecast_days,
@@ -89,6 +88,7 @@ def analyze_assets(symbols, asset_type):
         except:
             continue
     return results
+
 
 # ========== שליפת נתונים ========== #
 with st.spinner("טוען מניות S&P 500..."):
