@@ -7,3 +7,5 @@ plotly
 requests
 datetime
 scikit-learn
+streamlit
+beautifulsoup4
