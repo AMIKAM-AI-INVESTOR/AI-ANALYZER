@@ -26,7 +26,7 @@ def get_sp500_symbols():
 def get_top_crypto_symbols():
     return [
         "BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD", "XRP-USD", "DOGE-USD", "ADA-USD",
-        "AVAX-USD", "LINK-USD", "MATIC-USD", "DOT-USD", "TON11419-USD", "SHIB-USD",
+        "AVAX-USD", "LINK-USD", "MATIC-USD", "DOT-USD", "SHIB-USD",
         "LTC-USD", "ATOM-USD", "TRX-USD", "NEAR-USD", "UNI7083-USD", "XLM-USD", "ETC-USD"
     ]
 
@@ -67,15 +67,19 @@ def analyze_assets(symbols, asset_type):
             if data.empty or len(data) < 30:
                 continue
             close = data['Close']
+            current_price = close.iloc[-1]
             generate_signals(close)
             forecast_pct, forecast_days = forecast_price_change(close)
+            target_price = round(current_price * (1 + forecast_pct / 100), 2)
             risk = calculate_risk(close, forecast_pct / 100)
             confidence, success = calculate_confidence_and_success(symbol)
             timestamp = close.index[-1].strftime("%Y-%m-%d %H:%M")
             results.append({
                 "סימול": symbol,
                 "סוג": asset_type,
+                "שער נוכחי": round(current_price, 2),
                 "תחזית (%)": forecast_pct,
+                "שער תחזית": target_price,
                 "יעד (ימים)": forecast_days,
                 "רמות סיכון": risk,
                 "ביטחון": confidence,
