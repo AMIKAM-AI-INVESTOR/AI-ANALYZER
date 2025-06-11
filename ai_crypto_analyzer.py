@@ -11,7 +11,7 @@ from fundamentals import get_fundamental_data
 from pattern_detection import detect_patterns
 from model_engine import (
     analyze_with_model, train_model, fetch_data,
-    create_features, stock_symbols, crypto_symbols, load_model
+    create_features, stock_symbols, crypto_symbols
 )
 
 st.set_page_config(layout="wide", page_title="🧠 AI Stock & Crypto Analyzer", page_icon="📊")
@@ -42,28 +42,29 @@ st.markdown("""
 st.markdown("# 📊 AI Crypto & Stock Analyzer")
 st.markdown("### תחזיות חכמות | ניתוח גרפי | איתותים בזמן אמת")
 
-@st.cache_resource
-def get_or_train_model():
-    model = load_model()
-    if model is None:
-        df_all = []
-        for symbol in stock_symbols[:5] + crypto_symbols[:5]:
-            df = fetch_data(symbol)
-            if df is not None:
-                df_feat = create_features(df)
-                df_feat["symbol"] = symbol
-                df_all.append(df_feat)
-        if df_all:
-            df_all = pd.concat(df_all)
-            X = df_all[["return", "ma5", "ma20", "std"]]
-            y = df_all["target"]
-            model = train_model(X, y)
-    return model
+with st.spinner("📈 מאמן מודל AI על נתוני היסטוריה..."):
+    df_all = []
+    for symbol in stock_symbols[:5] + crypto_symbols[:5]:
+        df = fetch_data(symbol)
+        if df is not None:
+            df_feat = create_features(df)
+            df_feat["symbol"] = symbol
+            df_all.append(df_feat)
+    if df_all:
+        df_all = pd.concat(df_all)
+        X = df_all[["return", "ma5", "ma20", "std"]]
+        y = df_all["target"]
+        model = train_model(X, y)
+    else:
+        st.error("⚠️ לא הצלחנו לאסוף נתונים. ייתכן שיש בעיה זמנית עם Yahoo Finance.")
+        st.stop()
 
-with st.spinner("📈 טוען מודל ותחזיות..."):
-    model = get_or_train_model()
+with st.spinner("📊 מחשב תחזיות עדכניות..."):
     df_stocks = analyze_with_model(model, stock_symbols, "מניה")
     df_crypto = analyze_with_model(model, crypto_symbols, "קריפטו")
+
+    st.write("🔍 Debug: df_stocks shape", df_stocks.shape if isinstance(df_stocks, pd.DataFrame) else "Not a DataFrame")
+    st.write("🔍 Debug: df_crypto shape", df_crypto.shape if isinstance(df_crypto, pd.DataFrame) else "Not a DataFrame")
 
     if isinstance(df_stocks, pd.DataFrame) and "תחזית (%)" in df_stocks.columns:
         df_stocks = df_stocks.sort_values("תחזית (%)", ascending=False).head(10)
