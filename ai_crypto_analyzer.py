@@ -58,32 +58,20 @@ if model is None:
             st.stop()
 
 with st.spinner("📊 מחשב תחזיות עדכניות..."):
-    df_stocks = analyze_with_model(model, stock_symbols, "מניה")
-    df_crypto = analyze_with_model(model, crypto_symbols, "קריפטו")
+    df_stocks = analyze_with_model(model, stock_symbols, "מניה").sort_values("תחזית (%)", ascending=False).head(10)
+    df_crypto = analyze_with_model(model, crypto_symbols, "קריפטו").sort_values("תחזית (%)", ascending=False).head(10)
 
-# סינון חכם
-st.sidebar.header("🎛️ סינון תחזיות")
-asset_type_filter = st.sidebar.multiselect("סוג נכס", ["מניה", "קריפטו"], default=["מניה", "קריפטו"])
-confidence_filter = st.sidebar.slider("רמת ביטחון מינימלית (%)", 0, 100, 50)
-forecast_filter = st.sidebar.slider("תחזית עלייה מינימלית (%)", -50, 50, 5)
-
-df_all = pd.concat([df_stocks, df_crypto])
-expected_columns = ["סוג", "רמת ביטחון (%)", "תחזית (%)"]
-if all(col in df_all.columns for col in expected_columns):
-    df_filtered = df_all[
-        (df_all["סוג"].isin(asset_type_filter)) &
-        (df_all["רמת ביטחון (%)"] >= confidence_filter) &
-        (df_all["תחזית (%)"] >= forecast_filter)
-    ].sort_values("תחזית (%)", ascending=False).reset_index(drop=True)
+st.markdown("## 🧠 Top 10 מניות עם תחזית חיובית")
+if not df_stocks.empty:
+    st.dataframe(df_stocks.reset_index(drop=True), use_container_width=True)
 else:
-    st.error("⚠️ אחת העמודות הדרושות לא קיימת בנתונים: סוג / תחזית / רמת ביטחון.")
-    st.stop()
+    st.warning("❗ לא נמצאו תחזיות עדכניות עבור מניות.")
 
-st.markdown("## 🧠 תחזיות מסוננות")
-if not df_filtered.empty:
-    st.dataframe(df_filtered, use_container_width=True)
+st.markdown("## 🧠 Top 10 מטבעות קריפטו עם תחזית חיובית")
+if not df_crypto.empty:
+    st.dataframe(df_crypto.reset_index(drop=True), use_container_width=True)
 else:
-    st.warning("❗ לא נמצאו תחזיות שעומדות בתנאי הסינון.")
+    st.warning("❗ לא נמצאו תחזיות עדכניות עבור קריפטו.")
 
 st.markdown("---")
 st.markdown("## 🔍 ניתוח לפי סימול בודד")
