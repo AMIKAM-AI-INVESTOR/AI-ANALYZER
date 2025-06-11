@@ -93,3 +93,19 @@ print(df_stocks_top10.to_string(index=False))
 
 print("\nTop 10 קריפטו:")
 print(df_crypto_top10.to_string(index=False))
+
+def analyze_with_model(model, symbols, asset_type):
+    results = []
+    for symbol in symbols:
+        df = fetch_data(symbol)
+        if df is not None:
+            df_feat = create_features(df)
+            X_pred = df_feat[["return", "ma5", "ma20", "std"]]
+            prediction = model.predict(X_pred)
+            forecast = prediction[-1] * 100  # אחוז שינוי צפוי
+            results.append({
+                "נכס": symbol,
+                "תחזית (%)": round(forecast, 2),
+                "סוג": asset_type
+            })
+    return pd.DataFrame(results)
