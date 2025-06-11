@@ -109,3 +109,7 @@ def analyze_with_model(model, symbols, asset_type):
                 "סוג": asset_type
             })
     return pd.DataFrame(results)
+
+git add model_engine.py
+git commit -m "Fix: added analyze_with_model function"
+git push
