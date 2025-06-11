@@ -1,3 +1,4 @@
+
 import streamlit as st
 import plotly.graph_objects as go
 import pandas as pd
@@ -12,8 +13,29 @@ from model_engine import (
     create_features, stock_symbols, crypto_symbols, load_model
 )
 
-st.set_page_config(layout="wide", page_title="AI Stock & Crypto Analyzer")
-st.title("📊 AI Crypto & Stock Analyzer - תחזיות חכמות")
+st.set_page_config(layout="wide", page_title="🧠 AI Stock & Crypto Analyzer", page_icon="📊")
+
+st.markdown("""
+<style>
+    .main {
+        background-color: #0e1117;
+        color: white;
+    }
+    .stDataFrame, .stTextInput, .stSelectbox {
+        background-color: #1e222a !important;
+        color: white !important;
+    }
+    h1, h2, h3 {
+        color: #ffffff;
+    }
+    .block-container {
+        padding-top: 2rem;
+    }
+</style>
+"", unsafe_allow_html=True)
+
+st.markdown("# 📊 AI Crypto & Stock Analyzer")
+st.markdown("### תחזיות חכמות | ניתוח גרפי | איתותים בזמן אמת")
 
 with st.spinner("📈 טוען מודל..."):
     model = load_model()
@@ -40,11 +62,11 @@ with st.spinner("📊 מחשב תחזיות עדכניות..."):
     df_stocks = analyze_with_model(model, stock_symbols, "מניה")
     df_crypto = analyze_with_model(model, crypto_symbols, "קריפטו")
 
-# פילטרים חכמים
+# סינון חכם
 st.sidebar.header("🎛️ סינון תחזיות")
 asset_type_filter = st.sidebar.multiselect("סוג נכס", ["מניה", "קריפטו"], default=["מניה", "קריפטו"])
 confidence_filter = st.sidebar.slider("רמת ביטחון מינימלית (%)", 0, 100, 50)
-forecast_filter = st.sidebar.slider("תחזית מינימלית (%)", -50, 50, 5)
+forecast_filter = st.sidebar.slider("תחזית עלייה מינימלית (%)", -50, 50, 5)
 
 df_all = pd.concat([df_stocks, df_crypto])
 df_filtered = df_all[
@@ -53,17 +75,17 @@ df_filtered = df_all[
     (df_all["תחזית (%)"] >= forecast_filter)
 ].sort_values("תחזית (%)", ascending=False).reset_index(drop=True)
 
-st.header("🧠 תחזיות מסוננות")
+st.markdown("## 🧠 תחזיות מסוננות")
 if not df_filtered.empty:
     st.dataframe(df_filtered, use_container_width=True)
 else:
     st.warning("❗ לא נמצאו תחזיות שעומדות בתנאי הסינון.")
 
 st.markdown("---")
-st.header("🔍 ניתוח לפי סימול בודד")
-symbol_input = st.text_input("הכנס סימול (לדוגמה AAPL או BTC-USD):")
+st.markdown("## 🔍 ניתוח לפי סימול בודד")
+symbol_input = st.text_input("🔎 הכנס סימול (למשל AAPL או BTC-USD):")
 
-time_range = st.selectbox("בחר טווח זמן לניתוח הגרף:", ["3 חודשים", "6 חודשים", "שנה", "5 שנים"])
+time_range = st.selectbox("⏱️ טווח זמן לניתוח הגרף:", ["3 חודשים", "6 חודשים", "שנה", "5 שנים"])
 range_mapping = {
     "3 חודשים": "3mo",
     "6 חודשים": "6mo",
@@ -77,7 +99,7 @@ if symbol_input:
         df = detect_trade_signals(df)
         patterns = detect_patterns(df)
 
-        st.subheader("📈 גרף נרות יפניים + איתותים + תבניות גרפיות")
+        st.markdown("### 📈 גרף נרות יפניים + איתותים + תבניות גרפיות")
         fig = go.Figure()
         fig.add_trace(go.Candlestick(x=df.index, open=df['Open'], high=df['High'],
                                      low=df['Low'], close=df['Close'], name='Candlesticks'))
@@ -102,10 +124,10 @@ if symbol_input:
 
         st.plotly_chart(fig, use_container_width=True)
 
-        st.subheader("🔁 Backtesting")
+        st.markdown("### 🔁 Backtesting")
         st.dataframe(run_backtesting(df))
 
-        st.subheader("📋 נתונים פנדומנטליים")
+        st.markdown("### 📋 נתונים פנדומנטליים")
         st.json(get_fundamental_data(symbol_input))
     else:
         st.error("⚠️ לא נמצאו נתונים עבור הסימול.")
