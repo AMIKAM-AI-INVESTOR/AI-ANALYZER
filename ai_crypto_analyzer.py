@@ -3,6 +3,7 @@ import streamlit as st
 import plotly.graph_objects as go
 import pandas as pd
 import joblib
+import os
 
 from utils import fetch_price_history, detect_trade_signals
 from backtesting import run_backtesting
@@ -41,11 +42,10 @@ st.markdown("""
 st.markdown("# 📊 AI Crypto & Stock Analyzer")
 st.markdown("### תחזיות חכמות | ניתוח גרפי | איתותים בזמן אמת")
 
-with st.spinner("📈 טוען מודל..."):
+@st.cache_resource
+def get_or_train_model():
     model = load_model()
-
-if model is None:
-    with st.spinner("📈 מאמן מודל AI על נתוני היסטוריה..."):
+    if model is None:
         df_all = []
         for symbol in stock_symbols[:5] + crypto_symbols[:5]:
             df = fetch_data(symbol)
@@ -58,18 +58,18 @@ if model is None:
             X = df_all[["return", "ma5", "ma20", "std"]]
             y = df_all["target"]
             model = train_model(X, y)
-        else:
-            st.error("⚠️ לא הצלחנו לאסוף נתונים. ייתכן שיש בעיה זמנית עם Yahoo Finance.")
-            st.stop()
+    return model
 
-with st.spinner("📊 מחשב תחזיות עדכניות..."):
+with st.spinner("📈 טוען מודל ותחזיות..."):
+    model = get_or_train_model()
     df_stocks = analyze_with_model(model, stock_symbols, "מניה")
+    df_crypto = analyze_with_model(model, crypto_symbols, "קריפטו")
+
     if isinstance(df_stocks, pd.DataFrame) and "תחזית (%)" in df_stocks.columns:
         df_stocks = df_stocks.sort_values("תחזית (%)", ascending=False).head(10)
     else:
         df_stocks = pd.DataFrame()
 
-    df_crypto = analyze_with_model(model, crypto_symbols, "קריפטו")
     if isinstance(df_crypto, pd.DataFrame) and "תחזית (%)" in df_crypto.columns:
         df_crypto = df_crypto.sort_values("תחזית (%)", ascending=False).head(10)
     else:
