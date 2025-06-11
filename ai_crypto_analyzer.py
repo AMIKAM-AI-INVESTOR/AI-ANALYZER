@@ -1,3 +1,4 @@
+
 import streamlit as st
 import plotly.graph_objects as go
 import pandas as pd
@@ -20,9 +21,13 @@ st.markdown("""
         background-color: #0e1117;
         color: white;
     }
+    input, textarea, select {
+        background-color: white !important;
+        color: black !important;
+    }
     .stDataFrame, .stTextInput, .stSelectbox {
-        background-color: #1e222a !important;
-        color: white !important;
+        background-color: white !important;
+        color: black !important;
     }
     h1, h2, h3 {
         color: #ffffff;
@@ -59,12 +64,16 @@ if model is None:
 
 with st.spinner("📊 מחשב תחזיות עדכניות..."):
     df_stocks = analyze_with_model(model, stock_symbols, "מניה")
-    if "תחזית (%)" in df_stocks.columns:
+    if isinstance(df_stocks, pd.DataFrame) and "תחזית (%)" in df_stocks.columns:
         df_stocks = df_stocks.sort_values("תחזית (%)", ascending=False).head(10)
+    else:
+        df_stocks = pd.DataFrame()
 
     df_crypto = analyze_with_model(model, crypto_symbols, "קריפטו")
-    if "תחזית (%)" in df_crypto.columns:
+    if isinstance(df_crypto, pd.DataFrame) and "תחזית (%)" in df_crypto.columns:
         df_crypto = df_crypto.sort_values("תחזית (%)", ascending=False).head(10)
+    else:
+        df_crypto = pd.DataFrame()
 
 st.markdown("## 🧠 Top 10 מניות עם תחזית חיובית")
 if not df_stocks.empty:
