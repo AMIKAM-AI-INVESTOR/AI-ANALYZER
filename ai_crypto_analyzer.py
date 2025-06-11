@@ -55,8 +55,16 @@ st.markdown("---")
 st.header("🔍 ניתוח לפי סימול בודד")
 symbol_input = st.text_input("הכנס סימול (לדוגמה AAPL או BTC-USD):")
 
+time_range = st.selectbox("בחר טווח זמן לניתוח הגרף:", ["3 חודשים", "6 חודשים", "שנה", "5 שנים"])
+range_mapping = {
+    "3 חודשים": "3mo",
+    "6 חודשים": "6mo",
+    "שנה": "1y",
+    "5 שנים": "5y"
+}
+
 if symbol_input:
-    df = fetch_price_history(symbol_input)
+    df = fetch_price_history(symbol_input, period=range_mapping[time_range])
     if not df.empty:
         df = detect_trade_signals(df)
         st.subheader("📈 גרף נרות יפניים + איתותים")
