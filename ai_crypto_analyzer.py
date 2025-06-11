@@ -1,154 +1,79 @@
 import streamlit as st
-import pandas as pd
-import numpy as np
-import yfinance as yf
-from datetime import datetime
 import plotly.graph_objects as go
-import requests
-from bs4 import BeautifulSoup
-
+import yfinance as yf
 from utils import fetch_price_history, detect_trade_signals
 from backtesting import run_backtesting
 from fundamentals import get_fundamental_data
 
+from model_engine import (
+    analyze_with_model, train_model, fetch_data,
+    create_features, stock_symbols, crypto_symbols
+)
+
 st.set_page_config(layout="wide", page_title="AI Stock & Crypto Analyzer")
-st.title("AI Crypto & Stock Analyzer 📈🤖")
+st.title("📊 AI Crypto & Stock Analyzer - תחזיות חכמות")
 
-# === עזר ===
-def get_sp500_symbols():
-    url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
-    html = requests.get(url).text
-    soup = BeautifulSoup(html, "html.parser")
-    table = soup.find("table", {"id": "constituents"})
-    df = pd.read_html(str(table))[0]
-    return df["Symbol"].tolist()
+# שלב 1: אימון מודל ML
+with st.spinner("📈 מאמן מודל AI על נתוני היסטוריה..."):
+    df_all = []
+    for symbol in stock_symbols[:5] + crypto_symbols[:5]:  # מדגם לצורך ביצועים
+        df = fetch_data(symbol)
+        if df is not None:
+            df_feat = create_features(df)
+            df_feat["symbol"] = symbol
+            df_all.append(df_feat)
 
-def get_top_crypto_symbols():
-    return [
-        "BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD", "XRP-USD",
-        "DOGE-USD", "ADA-USD", "AVAX-USD", "LINK-USD", "MATIC-USD"
-    ]
+    df_all = pd.concat(df_all)
+    X = df_all[["return", "ma5", "ma20", "std"]]
+    y = df_all["target"]
+    model = train_model(X, y)
 
-def generate_signals(prices):
-    short_ma = prices.rolling(window=5).mean()
-    long_ma = prices.rolling(window=20).mean()
-    return (
-        (short_ma > long_ma) & (short_ma.shift(1) <= long_ma.shift(1)),
-        (short_ma < long_ma) & (short_ma.shift(1) >= long_ma.shift(1))
-    )
+# שלב 2: תחזיות לכל נכס
+with st.spinner("📊 מחשב תחזיות עדכניות..."):
+    df_stocks = analyze_with_model(model, stock_symbols, "מניה").sort_values("תחזית (%)", ascending=False).head(10)
+    df_crypto = analyze_with_model(model, crypto_symbols, "קריפטו").sort_values("תחזית (%)", ascending=False).head(10)
 
-def calculate_risk(prices, forecast_return):
-    volatility = prices.pct_change().rolling(window=20).std().iloc[-1]
-    try:
-        volatility = float(volatility)
-    except:
-        return "גבוה"
-    if np.isnan(volatility) or volatility == 0:
-        return "גבוה"
-    ratio = abs(forecast_return / volatility)
-    return "נמוך" if ratio >= 3 else "בינוני" if ratio >= 1.5 else "גבוה"
-
-def forecast_price_change(prices):
-    return round(np.random.uniform(0.02, 0.25) * 100, 2), np.random.randint(5, 20)
-
-def calculate_confidence_and_success(symbol):
-    return np.random.randint(60, 95), np.random.randint(55, 90)
-
-def get_current_price(symbol):
-    try:
-        ticker = yf.Ticker(symbol)
-        price = ticker.info.get("regularMarketPrice", None)
-        return round(price, 2) if price else None
-    except:
-        return None
-
-# === ניתוח נכסים ===
-def analyze_assets(symbols, asset_type):
-    results = []
-    for symbol in symbols:
-        try:
-            ticker = yf.Ticker(symbol)
-            price = ticker.info.get("regularMarketPrice", None)
-            if price is None:
-                continue
-            name = ticker.info.get("shortName", symbol)
-
-            data = yf.download(symbol, period="3mo", interval="1d", progress=False)
-            if data.empty or len(data) < 30:
-                continue
-
-            close = data['Close']
-            forecast_pct, forecast_days = forecast_price_change(close)
-            target_price = round(price * (1 + forecast_pct / 100), 2)
-            risk = calculate_risk(close, forecast_pct / 100)
-            confidence, success = calculate_confidence_and_success(symbol)
-            timestamp = close.index[-1].strftime("%Y-%m-%d %H:%M")
-
-            results.append({
-                "סימול": symbol,
-                "שם מלא": name,
-                "סוג": asset_type,
-                "שער נוכחי": round(price, 2),
-                "תחזית (%)": forecast_pct,
-                "שער תחזית": target_price,
-                "יעד (ימים)": forecast_days,
-                "רמות סיכון": risk,
-                "ביטחון": confidence,
-                "שיעור הצלחה (%)": success,
-                "תאריך איתות": timestamp
-            })
-        except:
-            continue
-    return results
-
-# === שליפת נתונים ועדכון טבלאות ===
-with st.spinner("🔄 טוען מניות S&P 500..."):
-    stock_symbols = get_sp500_symbols()
-with st.spinner("🔄 טוען מטבעות קריפטו..."):
-    crypto_symbols = get_top_crypto_symbols()
-
-stock_data = analyze_assets(stock_symbols, "מניה")
-crypto_data = analyze_assets(crypto_symbols, "קריפטו")
-
+# שלב 3: הצגת תחזיות
 st.header("🧠 Top 10 מניות")
-df_stocks = pd.DataFrame(stock_data)
 if not df_stocks.empty:
-    st.dataframe(df_stocks.sort_values("תחזית (%)", ascending=False).head(10), use_container_width=True)
+    st.dataframe(df_stocks.reset_index(drop=True), use_container_width=True)
 else:
-    st.warning("לא נמצאו מניות זמינות להצגה.")
+    st.warning("❗ לא נמצאו תחזיות עדכניות עבור מניות.")
 
 st.header("🧠 Top 10 מטבעות קריפטו")
-df_crypto = pd.DataFrame(crypto_data)
 if not df_crypto.empty:
-    st.dataframe(df_crypto.sort_values("תחזית (%)", ascending=False).head(10), use_container_width=True)
+    st.dataframe(df_crypto.reset_index(drop=True), use_container_width=True)
 else:
-    st.warning("לא נמצאו מטבעות זמינים להצגה.")
+    st.warning("❗ לא נמצאו תחזיות עדכניות עבור קריפטו.")
 
-# === ניתוח סימול אישי ===
+# שלב 4: ניתוח לפי סימול
 st.markdown("---")
-st.header("🔍 חיפוש וניתוח לפי סימול")
-ticker = st.text_input("הזן סימול (למשל AAPL או BTC-USD):")
+st.header("🔍 ניתוח לפי סימול בודד")
+symbol_input = st.text_input("הכנס סימול (לדוגמה AAPL או BTC-USD):")
 
-if ticker:
-    df = fetch_price_history(ticker)
+if symbol_input:
+    df = fetch_price_history(symbol_input)
     if not df.empty:
         df = detect_trade_signals(df)
-        st.subheader("📊 גרף נרות + איתותים")
+
+        st.subheader("📈 גרף נרות יפניים + איתותים")
         fig = go.Figure()
         fig.add_trace(go.Candlestick(x=df.index, open=df['Open'], high=df['High'],
                                      low=df['Low'], close=df['Close'], name='Candlesticks'))
+
         buy = df[df['Signal'] == 'Buy']
         sell = df[df['Signal'] == 'Sell']
         fig.add_trace(go.Scatter(x=buy.index, y=buy['Close'], mode='markers',
                                  marker=dict(color='green', size=10), name='Buy'))
         fig.add_trace(go.Scatter(x=sell.index, y=sell['Close'], mode='markers',
                                  marker=dict(color='red', size=10), name='Sell'))
+
         st.plotly_chart(fig, use_container_width=True)
 
         st.subheader("🔁 Backtesting")
         st.dataframe(run_backtesting(df))
 
         st.subheader("📋 נתונים פנדומנטליים")
-        st.json(get_fundamental_data(ticker))
+        st.json(get_fundamental_data(symbol_input))
     else:
         st.error("⚠️ לא נמצאו נתונים עבור הסימול.")
