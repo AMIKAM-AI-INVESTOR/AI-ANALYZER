@@ -6,6 +6,7 @@ import joblib
 from utils import fetch_price_history, detect_trade_signals
 from backtesting import run_backtesting
 from fundamentals import get_fundamental_data
+from pattern_detection import detect_patterns
 from model_engine import (
     analyze_with_model, train_model, fetch_data,
     create_features, stock_symbols, crypto_symbols, load_model
@@ -67,7 +68,9 @@ if symbol_input:
     df = fetch_price_history(symbol_input, period=range_mapping[time_range])
     if not df.empty:
         df = detect_trade_signals(df)
-        st.subheader("📈 גרף נרות יפניים + איתותים")
+        patterns = detect_patterns(df)
+
+        st.subheader("📈 גרף נרות יפניים + איתותים + תבניות גרפיות")
         fig = go.Figure()
         fig.add_trace(go.Candlestick(x=df.index, open=df['Open'], high=df['High'],
                                      low=df['Low'], close=df['Close'], name='Candlesticks'))
@@ -77,9 +80,24 @@ if symbol_input:
                                  marker=dict(color='green', size=10), name='Buy'))
         fig.add_trace(go.Scatter(x=sell.index, y=sell['Close'], mode='markers',
                                  marker=dict(color='red', size=10), name='Sell'))
+
+        for pattern in patterns:
+            fig.add_vline(x=pattern["index"], line=dict(color="blue", dash="dot"))
+            fig.add_annotation(
+                x=pattern["index"],
+                y=max(df["High"]),
+                text=pattern["type"],
+                showarrow=True,
+                arrowhead=1,
+                ax=0,
+                ay=-40
+            )
+
         st.plotly_chart(fig, use_container_width=True)
+
         st.subheader("🔁 Backtesting")
         st.dataframe(run_backtesting(df))
+
         st.subheader("📋 נתונים פנדומנטליים")
         st.json(get_fundamental_data(symbol_input))
     else:
