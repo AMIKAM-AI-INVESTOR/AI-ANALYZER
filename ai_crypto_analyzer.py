@@ -1,4 +1,3 @@
-
 import streamlit as st
 import plotly.graph_objects as go
 import pandas as pd
@@ -69,11 +68,16 @@ confidence_filter = st.sidebar.slider("רמת ביטחון מינימלית (%)"
 forecast_filter = st.sidebar.slider("תחזית עלייה מינימלית (%)", -50, 50, 5)
 
 df_all = pd.concat([df_stocks, df_crypto])
-df_filtered = df_all[
-    (df_all["סוג"].isin(asset_type_filter)) &
-    (df_all["רמת ביטחון (%)"] >= confidence_filter) &
-    (df_all["תחזית (%)"] >= forecast_filter)
-].sort_values("תחזית (%)", ascending=False).reset_index(drop=True)
+expected_columns = ["סוג", "רמת ביטחון (%)", "תחזית (%)"]
+if all(col in df_all.columns for col in expected_columns):
+    df_filtered = df_all[
+        (df_all["סוג"].isin(asset_type_filter)) &
+        (df_all["רמת ביטחון (%)"] >= confidence_filter) &
+        (df_all["תחזית (%)"] >= forecast_filter)
+    ].sort_values("תחזית (%)", ascending=False).reset_index(drop=True)
+else:
+    st.error("⚠️ אחת העמודות הדרושות לא קיימת בנתונים: סוג / תחזית / רמת ביטחון.")
+    st.stop()
 
 st.markdown("## 🧠 תחזיות מסוננות")
 if not df_filtered.empty:
