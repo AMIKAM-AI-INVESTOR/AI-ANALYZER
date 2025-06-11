@@ -1,6 +1,8 @@
 import streamlit as st
 import plotly.graph_objects as go
+import pandas as pd
 import yfinance as yf
+
 from utils import fetch_price_history, detect_trade_signals
 from backtesting import run_backtesting
 from fundamentals import get_fundamental_data
@@ -13,20 +15,25 @@ from model_engine import (
 st.set_page_config(layout="wide", page_title="AI Stock & Crypto Analyzer")
 st.title("📊 AI Crypto & Stock Analyzer - תחזיות חכמות")
 
-# שלב 1: אימון מודל ML
+# שלב 1: אימון מודל AI
 with st.spinner("📈 מאמן מודל AI על נתוני היסטוריה..."):
     df_all = []
-    for symbol in stock_symbols[:5] + crypto_symbols[:5]:  # מדגם לצורך ביצועים
+
+    for symbol in stock_symbols[:5] + crypto_symbols[:5]:
         df = fetch_data(symbol)
         if df is not None:
             df_feat = create_features(df)
             df_feat["symbol"] = symbol
             df_all.append(df_feat)
 
-    df_all = pd.concat(df_all)
-    X = df_all[["return", "ma5", "ma20", "std"]]
-    y = df_all["target"]
-    model = train_model(X, y)
+    if df_all:
+        df_all = pd.concat(df_all)
+        X = df_all[["return", "ma5", "ma20", "std"]]
+        y = df_all["target"]
+        model = train_model(X, y)
+    else:
+        st.error("⚠️ לא הצלחנו לאסוף נתונים. ייתכן שיש בעיה זמנית עם Yahoo Finance.")
+        st.stop()
 
 # שלב 2: תחזיות לכל נכס
 with st.spinner("📊 מחשב תחזיות עדכניות..."):
