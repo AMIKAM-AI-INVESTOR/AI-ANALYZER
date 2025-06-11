@@ -58,8 +58,16 @@ if model is None:
             st.stop()
 
 with st.spinner("📊 מחשב תחזיות עדכניות..."):
-    df_stocks = analyze_with_model(model, stock_symbols, "מניה").sort_values("תחזית (%)", ascending=False).head(10)
-    df_crypto = analyze_with_model(model, crypto_symbols, "קריפטו").sort_values("תחזית (%)", ascending=False).head(10)
+df_stocks = analyze_with_model(model, stock_symbols, "מניה")
+if "תחזית (%)" in df_stocks.columns:
+    df_stocks = df_stocks.sort_values("תחזית (%)", ascending=False).head(10)
+else:
+    st.warning("⚠️ לא קיימת עמודת תחזית בטבלת מניות.")
+df_crypto = analyze_with_model(model, crypto_symbols, "קריפטו")
+if "תחזית (%)" in df_crypto.columns:
+    df_crypto = df_crypto.sort_values("תחזית (%)", ascending=False).head(10)
+else:
+    st.warning("⚠️ לא קיימת עמודת תחזית בטבלת קריפטו.")
 
 st.markdown("## 🧠 Top 10 מניות עם תחזית חיובית")
 if not df_stocks.empty:
