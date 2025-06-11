@@ -14,8 +14,13 @@ def fetch_data(symbol, period="1y"):
     df = yf.download(symbol, period=period, interval="1d", progress=False)
     return df if not df.empty else None
 
-# חישוב פיצ'רים
+# יצירת פיצ'רים עם בדיקות
 def create_features(df):
+    if df is None or df.empty:
+        return pd.DataFrame()
+    if 'Close' not in df.columns:
+        print(f"❗ נתונים חסרים: אין עמודת Close")
+        return pd.DataFrame()
     df['return'] = df['Close'].pct_change()
     df['ma5'] = df['Close'].rolling(window=5).mean()
     df['ma20'] = df['Close'].rolling(window=20).mean()
@@ -30,7 +35,7 @@ def train_model(X_train, y_train):
     model.fit(X_train, y_train)
     return model
 
-# ניתוח עם המודל - כולל דיבאג
+# ניתוח עם המודל כולל דיבאג
 def analyze_with_model(model, symbol_list, asset_type):
     results = []
     for symbol in symbol_list:
