@@ -16,11 +16,14 @@ def fetch_data(symbol, period="1y"):
 
 # פיצ'רים בסיסיים
 def create_features(df):
+    if df is None or df.empty or 'Close' not in df.columns:
+        return pd.DataFrame()  # מחזיר DataFrame ריק במקרה של בעיה
+
     df['return'] = df['Close'].pct_change()
     df['ma5'] = df['Close'].rolling(window=5).mean()
     df['ma20'] = df['Close'].rolling(window=20).mean()
     df['std'] = df['Close'].rolling(window=20).std()
-    df['target'] = df['Close'].shift(-10) / df['Close'] - 1  # אחוז שינוי 10 ימים קדימה
+    df['target'] = df['Close'].shift(-10) / df['Close'] - 1
     df = df.dropna()
     return df
 
