@@ -1,6 +1,4 @@
 import streamlit as st
-import pandas as pd
-import yfinance as yf
 from model_engine import stock_symbols, crypto_symbols, train_model, fetch_data, analyze_with_model
 from explanations import generate_explanation
 from utils import (
@@ -10,48 +8,44 @@ from utils import (
     display_backtest_results,
     display_asset_analysis
 )
+import datetime
 
 st.set_page_config(layout="wide", page_title="AI Stock & Crypto Analyzer - תחזיות חכמות")
+
 st.title("📊 AI Stock & Crypto Analyzer - תחזיות חכמות")
 
-tab1, tab2 = st.tabs(["📈 ניתוח לפי סימול בודד", "📌 Top 10 מניות מומלצות"])
+tab1, tab2 = st.tabs(["🔍 ניתוח לפי סימול בודד", "📈 Top 10 מניות מומלצות"])
 
-# פונקציה לניתוח סימול בודד
-def analyze_asset(symbol):
-    df = fetch_data(symbol)
-    if df is None or df.empty:
-        return None, "לא ניתן היה לטעון את הנתונים."
-    df = detect_trade_signals(df)
-    df["Signal"] = df["Signal"].fillna("")
-    explanation = generate_explanation(df)
-    return df, explanation
-
-# טאב 1: ניתוח לפי נכס
 with tab1:
-    symbol = st.text_input("הכנס סימול (לדוגמה: AAPL או BTC-USD):", value="AAPL")
-    if st.button("בצע ניתוח"):
-        result, explanation = analyze_asset(symbol)
-        if result is not None:
-            st.subheader(f"תוצאות ניתוח עבור {symbol}")
-            st.plotly_chart(display_candlestick_chart(result, symbol), use_container_width=True)
-            st.markdown(f"**הסבר ניתוח:** {explanation}")
+    st.header("🔎 ניתוח לפי סימול בודד")
+    symbol = st.text_input("הכנס סימול (לדוגמה: AAPL או BTC-USD):")
+
+    if st.button("בצע ניתוח") and symbol:
+        result, error = analyze_asset(symbol)
+        if error:
+            st.error(error)
         else:
-            st.error(explanation)
+            display_candlestick_chart(result)
+            display_backtest_results(result)
+            display_asset_analysis(result)
 
-# טאב 2: טופ 10 המלצות
 with tab2:
-    st.subheader("📌 Top 10 מניות מומלצות")
-    model = train_model()
-
+    st.header("📈 Top 10 מניות מומלצות")
     try:
-        df_stocks = analyze_with_model(model, stock_symbols, "מניה")
-        display_top_10_forecast_table(df_stocks, "Top 10 מניות")
-    except Exception as e:
-        st.error(f"שגיאה בעיבוד ניתוח מניות: {e}")
+        df_stocks = analyze_with_model(train_model(stock_symbols, "מניה"), stock_symbols, "מניה")
+        df_crypto = analyze_with_model(train_model(crypto_symbols, "קריפטו"), crypto_symbols, "קריפטו")
 
-    st.subheader("📌 Top 10 מטבעות מומלצים")
-    try:
-        df_crypto = analyze_with_model(model, crypto_symbols, "קריפטו")
-        display_top_10_forecast_table(df_crypto, "Top 10 מטבעות")
+        display_top_10_forecast_table(df_stocks, "Top 10 מניות מומלצות")
+        display_top_10_forecast_table(df_crypto, "Top 10 מטבעות מומלצים")
     except Exception as e:
-        st.error(f"שגיאה בעיבוד ניתוח קריפטו: {e}")
+        st.error(f"שגיאה בעת עיבוד התחזיות: {e}")
+
+def analyze_asset(symbol):
+    try:
+        df = fetch_data(symbol)
+        df = detect_trade_signals(df)
+        explanation = generate_explanation(df)
+        df["explanation"] = explanation
+        return df, None
+    except Exception as e:
+        return None, str(e)
