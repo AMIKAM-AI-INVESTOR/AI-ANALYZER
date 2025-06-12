@@ -2,20 +2,34 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+import yfinance as yf
 from utils import fetch_price_history, detect_trade_signals
 
 st.set_page_config(page_title="AI Analyzer - Stocks & Crypto", layout="wide")
 st.markdown("# 📊 AI Analyzer - Stocks & Crypto")
 
+@st.cache_data
+def get_latest_prices(tickers):
+    df = yf.download(tickers=tickers, period="1d", interval="1d", progress=False)["Close"]
+    return df.iloc[-1].round(2).to_dict()
+
 def calculate_target_price(price, percent):
     return round(price * (1 + percent / 100), 2)
 
-# Top 10 Forecasted Stocks
+# Symbols for Top 10
+stock_symbols = ["AAPL", "TSLA", "NVDA", "MSFT", "META", "GOOGL", "AMZN", "CRM", "NFLX", "INTC"]
+crypto_symbols = ["BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD", "ADA-USD", "XRP-USD", "DOGE-USD", "DOT-USD", "AVAX-USD", "MATIC-USD"]
+
+# Fetch latest prices
+all_symbols = stock_symbols + crypto_symbols
+prices = get_latest_prices(all_symbols)
+
+# STOCK TABLE
 st.subheader("📈 Top 10 Forecasted Stocks")
 stock_data = {
-    "Symbol": ["AAPL", "TSLA", "NVDA", "MSFT", "META", "GOOGL", "AMZN", "CRM", "NFLX", "INTC"],
+    "Symbol": stock_symbols,
     "Name": ["Apple", "Tesla", "NVIDIA", "Microsoft", "Meta", "Google", "Amazon", "Salesforce", "Netflix", "Intel"],
-    "Current Price": [185.0, 190.3, 110.1, 345.6, 295.0, 132.8, 128.9, 212.5, 450.0, 42.3],
+    "Current Price": [prices[s] for s in stock_symbols],
     "Predicted Change (%)": [8.2, 12.5, 15.3, 5.1, 6.2, 4.9, 7.3, 6.7, 9.1, 5.8],
     "Target Time": ["7d", "5d", "10d", "14d", "12d", "11d", "9d", "8d", "6d", "13d"],
     "Confidence": [0.92, 0.88, 0.93, 0.85, 0.84, 0.83, 0.89, 0.86, 0.91, 0.87],
@@ -32,17 +46,17 @@ stock_data = {
         "MACD עולה בתיאום עם קפיצה משמעותית במחזור."
     ]
 }
-top10_stocks = pd.DataFrame(stock_data)
-top10_stocks["Target Price"] = top10_stocks.apply(lambda row: calculate_target_price(row["Current Price"], row["Predicted Change (%)"]), axis=1)
-cols_order = ["Symbol", "Name", "Current Price", "Predicted Change (%)", "Target Price", "Target Time", "Confidence", "Forecast Explanation (Hebrew)"]
-st.dataframe(top10_stocks[cols_order])
+stock_df = pd.DataFrame(stock_data)
+stock_df["Target Price"] = stock_df.apply(lambda row: calculate_target_price(row["Current Price"], row["Predicted Change (%)"]), axis=1)
+cols = ["Symbol", "Name", "Current Price", "Predicted Change (%)", "Target Price", "Target Time", "Confidence", "Forecast Explanation (Hebrew)"]
+st.dataframe(stock_df[cols])
 
-# Top 10 Forecasted Cryptos
+# CRYPTO TABLE
 st.subheader("💹 Top 10 Forecasted Cryptocurrencies")
 crypto_data = {
-    "Symbol": ["BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD", "ADA-USD", "XRP-USD", "DOGE-USD", "DOT-USD", "AVAX-USD", "MATIC-USD"],
+    "Symbol": crypto_symbols,
     "Name": ["Bitcoin", "Ethereum", "Solana", "BNB", "Cardano", "Ripple", "Dogecoin", "Polkadot", "Avalanche", "Polygon"],
-    "Current Price": [67500, 3700, 160, 590, 0.45, 0.59, 0.15, 6.2, 35.0, 1.2],
+    "Current Price": [prices[s] for s in crypto_symbols],
     "Predicted Change (%)": [22.7, 18.9, 27.8, 14.2, 11.4, 9.5, 12.1, 13.3, 15.7, 10.9],
     "Target Time": ["3d", "4d", "3d", "6d", "5d", "7d", "4d", "6d", "5d", "8d"],
     "Confidence": [0.97, 0.95, 0.96, 0.88, 0.85, 0.83, 0.84, 0.86, 0.89, 0.82],
@@ -59,11 +73,11 @@ crypto_data = {
         "קרוס ממוצע נע מעלה + עניין גובר בשוק."
     ]
 }
-top10_cryptos = pd.DataFrame(crypto_data)
-top10_cryptos["Target Price"] = top10_cryptos.apply(lambda row: calculate_target_price(row["Current Price"], row["Predicted Change (%)"]), axis=1)
-st.dataframe(top10_cryptos[cols_order])
+crypto_df = pd.DataFrame(crypto_data)
+crypto_df["Target Price"] = crypto_df.apply(lambda row: calculate_target_price(row["Current Price"], row["Predicted Change (%)"]), axis=1)
+st.dataframe(crypto_df[cols])
 
-# Asset Analysis
+# ANALYZE SPECIFIC ASSET
 st.markdown("## 🔍 Analyze a Specific Asset")
 symbol = st.text_input("Enter a stock or crypto symbol (e.g. AAPL, BTC-USD):", value="AAPL")
 period = st.selectbox("Select time period:", ["1mo", "3mo", "6mo", "1y", "2y"], index=2)
@@ -73,7 +87,7 @@ if symbol:
         df = fetch_price_history(symbol, period=period)
         df = detect_trade_signals(df)
 
-        if not df.empty and df["Close"].dtype != object:
+        if not df.empty:
             fig = go.Figure(data=[
                 go.Candlestick(
                     x=df.index,
