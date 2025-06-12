@@ -1,2 +1,8 @@
+
+import pandas as pd
+
 def summarize_pattern_stats(df):
-    return df.groupby("pattern")["success"].agg(["count", "mean"]).rename(columns={"count": "Total", "mean": "Success Rate (%)"})
+    summary = df.groupby("pattern")["success"].agg(["count", "mean"]).reset_index()
+    summary.columns = ["Pattern", "Total Occurrences", "Success Rate"]
+    summary["Success Rate"] = (summary["Success Rate"] * 100).round(2)
+    return summary.sort_values(by="Success Rate", ascending=False)
