@@ -6,7 +6,9 @@ from explanations import generate_explanation
 from utils import (
     detect_trade_signals,
     display_candlestick_chart,
-    display_top_10_forecast_table
+    display_top_10_forecast_table,
+    display_backtest_results,
+    display_asset_analysis
 )
 
 st.set_page_config(layout="wide", page_title="AI Stock & Crypto Analyzer - תחזיות חכמות")
