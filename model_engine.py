@@ -1,62 +1,71 @@
-
-import xgboost as xgb
 import pandas as pd
-import numpy as np
 import yfinance as yf
+from sklearn.ensemble import RandomForestRegressor
 from explanations import generate_explanation
 
-# רשימות סימולים
-stock_symbols = ["AAPL", "MSFT", "GOOGL", "META", "NVDA", "TSLA", "AMZN", "NFLX", "AMD", "INTC"]
-crypto_symbols = ["BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD", "XRP-USD", "DOGE-USD", "ADA-USD", "AVAX-USD", "LINK-USD", "MATIC-USD"]
+# רשימות סימולים לדוגמה
+stock_symbols = ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "TSLA", "NFLX", "INTC", "AMD"]
+crypto_symbols = ["BTC-USD", "ETH-USD", "BNB-USD", "SOL-USD", "ADA-USD", "XRP-USD", "DOGE-USD", "AVAX-USD", "DOT-USD", "MATIC-USD"]
 
-# פונקציה לשליפת נתונים
-def fetch_data(symbol, period="1y"):
+def fetch_data(symbol, period="3mo"):
     df = yf.download(symbol, period=period, interval="1d", progress=False)
-    return df if not df.empty else None
+    df.dropna(inplace=True)
+    return df
 
-# פיצ'רים בסיסיים
 def create_features(df):
-    if df is None or df.empty or 'Close' not in df.columns:
-        return pd.DataFrame()  # מחזיר DataFrame ריק במקרה של בעיה
-
     df['return'] = df['Close'].pct_change()
     df['ma5'] = df['Close'].rolling(window=5).mean()
     df['ma20'] = df['Close'].rolling(window=20).mean()
-    df['std'] = df['Close'].rolling(window=20).std()
-    df['target'] = df['Close'].shift(-10) / df['Close'] - 1
-    df = df.dropna()
+    df['std'] = df['Close'].rolling(window=5).std()
+    df.dropna(inplace=True)
     return df
 
-# אימון מודל
-def train_model(X_train, y_train):
-    model = xgb.XGBRegressor(objective='reg:squarederror', n_estimators=100)
-    model.fit(X_train, y_train)
-    return model
+def train_model():
+    # מודל פשוט לאימון – ניתן להרחבה בעתיד
+    return RandomForestRegressor(n_estimators=100, random_state=42)
 
-# ניתוח תחזית עם הסבר
 def analyze_with_model(model, symbols, asset_type):
     results = []
+
     for symbol in symbols:
-        df = fetch_data(symbol)
-        if df is not None:
+        try:
+            df = fetch_data(symbol)
             df_feat = create_features(df)
-            X_pred = df_feat[["return", "ma5", "ma20", "std"]]
-            prediction = model.predict(X_pred)
-            forecast_pct = round(prediction[-1] * 100, 2)
-            current_price = round(df["Close"].iloc[-1], 2)
-            target_price = round(current_price * (1 + forecast_pct / 100), 2)
+
+            if len(df_feat) < 20:
+                continue
+
+            model.fit(df_feat[["ma5", "ma20", "std"]], df_feat["return"])
+
+            last_row = df_feat.iloc[-1]
+            forecast = model.predict([[last_row["ma5"], last_row["ma20"], last_row["std"]]])[0]
+            forecast_pct = round(forecast * 100, 2)
             forecast_days = 10
-            confidence = round(np.std(prediction[-5:]) * 100, 2)
-            explanation = generate_explanation(df)
+            current_price = df_feat["Close"].iloc[-1]
+            target_price = round(current_price * (1 + forecast), 2)
+            explanation = generate_explanation(df_feat)
 
             results.append({
                 "סימול": symbol,
-                "סוג": asset_type,
-                "שער נוכחי": current_price,
+                "שער נוכחי": round(current_price, 2),
                 "תחזית (%)": forecast_pct,
                 "שער תחזית": target_price,
-                "יעד (ימים)": forecast_days,
-                "ביטחון (%)": 100 - confidence,
+                "(ימים) יעד": forecast_days,
+                "ביטחון (%)": round(100 - abs(forecast_pct), 2),
                 "הסבר התחזית": explanation
             })
-    return pd.DataFrame(results)
+        except Exception:
+            results.append({
+                "סימול": symbol,
+                "שער נוכחי": None,
+                "תחזית (%)": None,
+                "שער תחזית": None,
+                "(ימים) יעד": None,
+                "ביטחון (%)": None,
+                "הסבר התחזית": "שגיאה בעיבוד הניתוח"
+            })
+
+    df_results = pd.DataFrame(results)
+    df_results.sort_values(by="תחזית (%)", ascending=False, inplace=True)
+    df_results.reset_index(drop=True, inplace=True)
+    return df_results
