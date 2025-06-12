@@ -53,23 +53,24 @@ if symbol:
             # Detect chart patterns
             patterns = detect_head_and_shoulders(df) + detect_flags(df)
             
-try:
-    for date, pattern_name in patterns:
-        if date in df.index:
-            price = df.loc[date]['High']
-            fig.add_annotation(
-                x=date,
-                y=price,
-                text=pattern_name,
-                showarrow=True,
-                arrowhead=1,
-                ax=0,
-                ay=-40,
-                font=dict(color="blue"),
-                bgcolor="rgba(255,255,255,0.9)"
-            )
-except Exception as e:
-    st.warning(f"Pattern annotation failed: {e}")
+            try:
+                for date, pattern_name in patterns:
+                    if date in df.index:
+                        price = df.loc[date]['High']
+                        fig.add_annotation(
+                            x=date,
+                            y=price,
+                            text=pattern_name,
+                            showarrow=True,
+                            arrowhead=1,
+                            ax=0,
+                            ay=-40,
+                            font=dict(color="blue"),
+                            bgcolor="rgba(255,255,255,0.9)"
+                        )
+            except Exception as e:
+                st.warning(f"Pattern annotation failed: {e}")
+
 
 
 # Candlestick chart
