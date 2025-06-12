@@ -1,48 +1,53 @@
-from utils import (
-    detect_trade_signals,
-    display_candlestick_chart,
-    display_top_10_forecast_table,
-    display_backtest_results,
-    display_asset_analysis,
-)
-import datetime
+import streamlit as st
+import pandas as pd
+import plotly.graph_objects as go
+from datetime import datetime
 
-st.set_page_config(layout="wide", page_title="AI Stock & Crypto Analyzer - תחזיות חכמות")
+# ייבוא הפונקציות מקובץ utils
+from utils import fetch_price_history, detect_trade_signals
 
-st.title("📊 AI Stock & Crypto Analyzer - תחזיות חכמות")
+# כותרת האפליקציה
+st.set_page_config(page_title="AI Stock & Crypto Analyzer", layout="wide")
+st.title("📊 AI Analyzer - Stocks & Crypto")
 
-tab1, tab2 = st.tabs(["🔍 ניתוח לפי סימול בודד", "📈 Top 10 מניות מומלצות"])
+# בחירת נכס
+symbol = st.text_input("Enter a stock or crypto symbol (e.g. AAPL, BTC-USD):", value="AAPL")
 
-with tab1:
-    st.header("🔎 ניתוח לפי סימול בודד")
-    symbol = st.text_input("הכנס סימול (לדוגמה: AAPL או BTC-USD):")
+# טווח זמן
+period = st.selectbox("Select time period:", ["1mo", "3mo", "6mo", "1y", "2y"], index=2)
 
-    if st.button("בצע ניתוח") and symbol:
-        result, error = analyze_asset(symbol)
-        if error:
-            st.error(error)
-        else:
-            display_candlestick_chart(result)
-            display_backtest_results(result)
-            display_asset_analysis(result)
-
-with tab2:
-    st.header("📈 Top 10 מניות מומלצות")
-    try:
-        df_stocks = analyze_with_model(train_model(stock_symbols, "מניה"), stock_symbols, "מניה")
-        df_crypto = analyze_with_model(train_model(crypto_symbols, "קריפטו"), crypto_symbols, "קריפטו")
-
-        display_top_10_forecast_table(df_stocks, "Top 10 מניות מומלצות")
-        display_top_10_forecast_table(df_crypto, "Top 10 מטבעות מומלצים")
-    except Exception as e:
-        st.error(f"שגיאה בעת עיבוד התחזיות: {e}")
-
-def analyze_asset(symbol):
-    try:
-        df = fetch_data(symbol)
+# שליפת נתונים
+if symbol:
+    with st.spinner("Fetching data..."):
+        df = fetch_price_history(symbol, period=period)
         df = detect_trade_signals(df)
-        explanation = generate_explanation(df)
-        df["explanation"] = explanation
-        return df, None
-    except Exception as e:
-        return None, str(e)
+
+        # גרף נרות יפניים
+        fig = go.Figure(data=[
+            go.Candlestick(
+                x=df.index,
+                open=df["Open"],
+                high=df["High"],
+                low=df["Low"],
+                close=df["Close"],
+                name="Candlestick"
+            )
+        ])
+
+        # הוספת סימני קנייה/מכירה
+        for i in range(len(df)):
+            if df["Signal"].iloc[i] == "Buy":
+                fig.add_trace(go.Scatter(x=[df.index[i]], y=[df["Close"].iloc[i]],
+                                         mode="markers", marker=dict(color="green", size=10),
+                                         name="Buy Signal"))
+            elif df["Signal"].iloc[i] == "Sell":
+                fig.add_trace(go.Scatter(x=[df.index[i]], y=[df["Close"].iloc[i]],
+                                         mode="markers", marker=dict(color="red", size=10),
+                                         name="Sell Signal"))
+
+        fig.update_layout(title=f"Candlestick Chart for {symbol}", xaxis_title="Date", yaxis_title="Price")
+        st.plotly_chart(fig, use_container_width=True)
+
+        # הצגת טבלה
+        st.subheader("Raw Data with Signals")
+        st.dataframe(df.tail(50))
