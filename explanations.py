@@ -9,11 +9,11 @@ def generate_explanation(df):
     explanation_parts = []
 
     # מגמה טכנית
-    if all([
-        latest_close is not None and pd.notna(latest_close),
-        ma5 is not None and pd.notna(ma5),
-        ma20 is not None and pd.notna(ma20)
-    ]):
+  if all([
+    pd.notna(latest_close),
+    pd.notna(ma5),
+    pd.notna(ma20)
+]):
         if latest_close > ma5 and ma5 > ma20:
             explanation_parts.append("מגמת עלייה (MA5 > MA20)")
         elif latest_close < ma5 and ma5 < ma20:
