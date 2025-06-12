@@ -2,15 +2,17 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+import json
 
 from data_fetcher import fetch_price_history
 from utils import detect_trade_signals
 from top10_data import get_top10_forecasts
+from fundamentals import get_fundamental_data
 
 st.set_page_config(page_title="AI Analyzer - Stocks & Crypto", layout="wide")
 st.title("📊 AI Analyzer - Stocks & Crypto")
 
-# Show Top 10 Forecasts for Stocks and Crypto
+# Top 10 Forecasts
 st.subheader("📈 Top 10 Forecasted Stocks")
 stocks_df, crypto_df = get_top10_forecasts()
 
@@ -21,7 +23,7 @@ st.subheader("✅ Top 10 Forecasted Cryptocurrencies")
 if crypto_df is not None:
     st.dataframe(crypto_df)
 
-# Analyze a specific asset
+# Analyze specific asset
 st.header("🔍 Analyze a Specific Asset")
 symbol = st.text_input("Enter a stock or crypto symbol (e.g. AAPL, BTC-USD):", value="AAPL")
 period = st.selectbox("Select time period:", ["1mo", "3mo", "6mo", "1y"])
@@ -30,8 +32,8 @@ if symbol:
     df = fetch_price_history(symbol, period=period)
     if df is not None and not df.empty and all(x in df.columns for x in ["Open", "High", "Low", "Close"]):
         df = detect_trade_signals(df)
-        st.subheader(f"{symbol.upper()} Candlestick Chart")
 
+        st.subheader(f"{symbol.upper()} Candlestick Chart")
         fig = go.Figure(data=[
             go.Candlestick(
                 x=df.index,
@@ -39,11 +41,11 @@ if symbol:
                 high=df["High"],
                 low=df["Low"],
                 close=df["Close"],
-                name="Price",
+                name="Price"
             )
         ])
 
-        # Buy and Sell Signals
+        # Buy and Sell signals
         buy_signals = df[df["Signal"] == "Buy"]
         sell_signals = df[df["Signal"] == "Sell"]
 
@@ -65,5 +67,13 @@ if symbol:
 
         fig.update_layout(xaxis_title="Date", yaxis_title="Price", xaxis_rangeslider_visible=False)
         st.plotly_chart(fig, use_container_width=True)
+
+        # Show fundamentals
+        st.subheader("📄 Fundamental Data")
+        fundamentals = get_fundamental_data(symbol)
+        if fundamentals:
+            st.json(fundamentals)
+        else:
+            st.info("No fundamental data available for this asset.")
     else:
         st.warning("No valid data found for this asset. Try another symbol.")
