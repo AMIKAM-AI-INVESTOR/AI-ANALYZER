@@ -8,8 +8,10 @@ def generate_explanation(df):
 
     explanation_parts = []
 
-    # בדיקה שכל הנתונים קיימים ולא NaN
-    if all(x is not None and pd.notna(x) for x in [latest_close, ma5, ma20]):
+    if (latest_close is not None and pd.notna(latest_close) and
+        ma5 is not None and pd.notna(ma5) and
+        ma20 is not None and pd.notna(ma20)):
+        
         if latest_close > ma5 and ma5 > ma20:
             explanation_parts.append("מגמת עלייה (MA5 > MA20)")
         elif latest_close < ma5 and ma5 < ma20:
