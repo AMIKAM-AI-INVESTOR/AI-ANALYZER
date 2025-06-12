@@ -1,4 +1,3 @@
-
 import yfinance as yf
 from pattern_recognition import detect_head_and_shoulders, detect_flags
 from ai_model import train_basic_ai_model, predict_signal
@@ -21,16 +20,11 @@ def analyze_symbol(symbol):
         recent_pct = (df["Close"].iloc[-1] - df["Close"].iloc[-5]) / df["Close"].iloc[-5]
         risk = predict_from_memory_model(memory_model, df["Close"].iloc[-1], recent_pct)
 
-        message = f"📊 **Analysis for {symbol.upper()}**
-"
-        message += f"🔹 Current Price: {df['Close'].iloc[-1]:.2f}
-"
-        message += f"🔹 Detected Patterns: {', '.join(pattern_names) if pattern_names else 'None'}
-"
-        message += f"🔹 AI Forecast: {ai_result}
-"
-        message += f"🔹 Risk Level (based on memory): {risk}
-"
+        message = f"📊 **Analysis for {symbol.upper()}**\n"
+        message += f"🔹 Current Price: {df['Close'].iloc[-1]:.2f}\n"
+        message += f"🔹 Detected Patterns: {', '.join(pattern_names) if pattern_names else 'None'}\n"
+        message += f"🔹 AI Forecast: {ai_result}\n"
+        message += f"🔹 Risk Level (based on memory): {risk}\n"
 
         return message
     except Exception as e:
