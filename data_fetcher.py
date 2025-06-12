@@ -2,9 +2,10 @@
 import pandas as pd
 import yfinance as yf
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime
+from bs4 import BeautifulSoup
 
-# ניסיון ראשי עם yfinance
+# מקור ראשי: yfinance
 def fetch_from_yfinance(symbol, period="6mo", interval="1d"):
     try:
         df = yf.download(symbol, period=period, interval=interval)
@@ -15,7 +16,7 @@ def fetch_from_yfinance(symbol, period="6mo", interval="1d"):
         return None
     return None
 
-# ניסיון שני: CoinGecko (לקריפטו בלבד)
+# מקור שני: CoinGecko (לקריפטו)
 def fetch_from_coingecko(symbol):
     symbol = symbol.lower().replace("-usd", "")
     try:
@@ -37,7 +38,7 @@ def fetch_from_coingecko(symbol):
         return None
     return None
 
-# ניסיון שלישי: Alpha Vantage (דורש מפתח API אם תבחר)
+# מקור שלישי: Alpha Vantage
 def fetch_from_alpha_vantage(symbol, apikey="demo"):
     try:
         url = ("https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED"
@@ -62,19 +63,77 @@ def fetch_from_alpha_vantage(symbol, apikey="demo"):
         return None
     return None
 
-# ממשק אחיד לשימוש באפליקציה
-def fetch_price_history(symbol, period="6mo", interval="1d"):
-    df = fetch_from_yfinance(symbol, period, interval)
-    if df is not None and not df.empty:
-        return df
+# מקור רביעי: Finviz (מידע יומי בלבד, לא היסטורי)
+def fetch_from_finviz(symbol):
+    try:
+        url = f"https://finviz.com/quote.ashx?t={symbol}"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        response = requests.get(url, headers=headers)
+        soup = BeautifulSoup(response.text, "html.parser")
+        table = soup.find("table", class_="snapshot-table2")
+        rows = table.find_all("tr")
+        price = None
+        for row in rows:
+            cells = row.find_all("td")
+            for i in range(0, len(cells), 2):
+                key = cells[i].text
+                val = cells[i + 1].text
+                if key == "Price":
+                    price = float(val.replace(",", ""))
+        if price:
+            date = pd.to_datetime("today").normalize()
+            df = pd.DataFrame({
+                "Open": [price],
+                "High": [price],
+                "Low": [price],
+                "Close": [price],
+                "Volume": [0]
+            }, index=[date])
+            return df
+    except Exception:
+        return None
+    return None
 
-    if "-USD" in symbol.upper():
-        df = fetch_from_coingecko(symbol)
+# מקור חמישי: Investing (לא רשמי, ייתכן שיחסם)
+def fetch_from_investing(symbol):
+    try:
+        symbol_map = {
+            "AAPL": "apple-computer-inc",
+            "TSLA": "tesla-motors",
+            "MSFT": "microsoft-corp"
+        }
+        if symbol not in symbol_map:
+            return None
+        url = f"https://www.investing.com/equities/{symbol_map[symbol]}"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        response = requests.get(url, headers=headers)
+        soup = BeautifulSoup(response.text, "html.parser")
+        span = soup.find("span", attrs={"data-test": "instrument-price-last"})
+        if span:
+            price = float(span.text.replace(",", ""))
+            date = pd.to_datetime("today").normalize()
+            df = pd.DataFrame({
+                "Open": [price],
+                "High": [price],
+                "Low": [price],
+                "Close": [price],
+                "Volume": [0]
+            }, index=[date])
+            return df
+    except Exception:
+        return None
+    return None
+
+# מנוע ראשי: שילוב המקורות לפי סדר
+def fetch_price_history(symbol, period="6mo", interval="1d"):
+    for fetcher in [
+        fetch_from_yfinance,
+        fetch_from_coingecko,
+        fetch_from_alpha_vantage,
+        fetch_from_finviz,
+        fetch_from_investing,
+    ]:
+        df = fetcher(symbol)
         if df is not None and not df.empty:
             return df
-
-    df = fetch_from_alpha_vantage(symbol)
-    if df is not None and not df.empty:
-        return df
-
-    return pd.DataFrame()  # fallback ריק
+    return pd.DataFrame()
