@@ -1,66 +1,43 @@
-import yfinance as yf
+
 import pandas as pd
-from datetime import datetime, timedelta
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report
 
-# רשימות סימולים
-stock_symbols = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "NFLX", "INTC", "AMD"]
-crypto_symbols = ["BTC-USD", "ETH-USD", "BNB-USD", "XRP-USD", "SOL-USD", "ADA-USD", "DOGE-USD", "AVAX-USD", "DOT-USD", "MATIC-USD"]
-
-# פונקציית הבאת נתונים
-def fetch_data(symbol, period="6mo", interval="1d"):
-    df = yf.download(symbol, period=period, interval=interval)
+def extract_technical_features(df):
+    df["MA5"] = df["Close"].rolling(window=5).mean()
+    df["MA20"] = df["Close"].rolling(window=20).mean()
+    df["RSI"] = compute_rsi(df["Close"], 14)
+    df["Return"] = df["Close"].pct_change()
+    df["Target"] = (df["Close"].shift(-3) > df["Close"]).astype(int)
     df = df.dropna()
     return df
 
-# פונקציית יצירת תכונות למודל
-def create_features(df):
-    df["return"] = df["Close"].pct_change()
-    df["ma5"] = df["Close"].rolling(window=5).mean()
-    df["ma20"] = df["Close"].rolling(window=20).mean()
-    df["std"] = df["Close"].rolling(window=20).std()
-    df = df.dropna()
-    return df
+def compute_rsi(series, period=14):
+    delta = series.diff()
+    up = delta.clip(lower=0)
+    down = -1 * delta.clip(upper=0)
+    ma_up = up.rolling(window=period).mean()
+    ma_down = down.rolling(window=period).mean()
+    rsi = 100 - (100 / (1 + ma_up / ma_down))
+    return rsi
 
-# מודל פשוט מבוסס מגמה וסטיות תקן
-def train_model(symbols, asset_type="מניה"):
-    model = {}
-    for symbol in symbols:
-        try:
-            df = fetch_data(symbol)
-            df_feat = create_features(df)
-            if len(df_feat) > 0:
-                last = df_feat.iloc[-1]
-                trend = (last["ma5"] - last["ma20"]) / last["ma20"]
-                volatility = last["std"] / last["Close"]
-                score = trend - volatility
-                model[symbol] = {
-                    "score": score,
-                    "latest_close": last["Close"],
-                    "trend": trend,
-                    "volatility": volatility
-                }
-        except Exception as e:
-            print(f"שגיאה בניתוח {symbol}: {e}")
-    return model
+def train_ai_model(df):
+    df = extract_technical_features(df)
+    X = df[["MA5", "MA20", "RSI", "Return"]]
+    y = df["Target"]
+    X_train, X_test, y_train, y_test = train_test_split(X, y, shuffle=False, test_size=0.3)
+    model = RandomForestClassifier(n_estimators=100, random_state=42)
+    model.fit(X_train, y_train)
+    report = classification_report(y_test, model.predict(X_test), output_dict=True)
+    return model, report
 
-# ניתוח מודל והפקת תחזיות
-def analyze_with_model(model, symbols, asset_type="מניה"):
-    forecasts = []
-    for symbol in symbols:
-        if symbol in model:
-            data = model[symbol]
-            predicted_change = round(data["score"] * 100, 2)
-            target_price = data["latest_close"] * (1 + predicted_change / 100)
-            confidence = round(100 - abs(data["volatility"] * 100), 2)
-            forecasts.append({
-                "סימול": symbol,
-                "תחזית (%)": predicted_change,
-                "שער נוכחי": round(data["latest_close"], 2),
-                "יעד (ימים)": 10,
-                "תחזית שער": round(target_price, 2),
-                "ביטחון (%)": confidence,
-                "הסבר התחזית": "נתונים חלקיים למוצעים | אין מספיק מידע על תנודתיות"
-            })
-    df = pd.DataFrame(forecasts)
-    df = df.sort_values("תחזית (%)", ascending=False).reset_index(drop=True)
-    return df
+def run_backtesting(df, model):
+    df = extract_technical_features(df)
+    X = df[["MA5", "MA20", "RSI", "Return"]]
+    df["Prediction"] = model.predict(X)
+    df["BuyHold"] = (df["Close"] / df["Close"].iloc[0]) - 1
+    df["Strategy"] = df["Prediction"].shift(1) * df["Return"]
+    df["StrategyCumulative"] = (df["Strategy"] + 1).cumprod() - 1
+    return df[["BuyHold", "StrategyCumulative"]]
