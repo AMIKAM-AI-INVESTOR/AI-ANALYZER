@@ -3,7 +3,11 @@ import pandas as pd
 import yfinance as yf
 from model_engine import stock_symbols, crypto_symbols, train_model, fetch_data, analyze_with_model
 from explanations import generate_explanation
-from utils import detect_trade_signals, display_candlestick_chart, display_top_10_forecast_table
+from utils import (
+    detect_trade_signals,
+    display_candlestick_chart,
+    display_top_10_forecast_table
+)
 
 st.set_page_config(layout="wide", page_title="AI Stock & Crypto Analyzer - תחזיות חכמות")
 st.title("📊 AI Stock & Crypto Analyzer - תחזיות חכמות")
