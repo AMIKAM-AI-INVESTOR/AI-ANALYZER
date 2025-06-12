@@ -5,22 +5,11 @@ import plotly.graph_objects as go
 
 from data_fetcher import fetch_price_history
 from utils import detect_trade_signals
-from top10_data import get_top10_forecasts
 
 st.set_page_config(page_title="AI Analyzer - Stocks & Crypto", layout="wide")
-
 st.title("📊 AI Analyzer - Stocks & Crypto")
 
-# הצגת טבלאות טופ 10
-st.subheader("📉 Top 10 Forecasted Stocks")
-stocks_df = get_top10_forecasts("stocks")
-st.dataframe(stocks_df, use_container_width=True)
-
-st.subheader("✅ Top 10 Forecasted Cryptocurrencies")
-crypto_df = get_top10_forecasts("crypto")
-st.dataframe(crypto_df, use_container_width=True)
-
-# ניתוח מניה או מטבע בודד
+# Analyze a specific asset
 st.header("🔍 Analyze a Specific Asset")
 symbol = st.text_input("Enter a stock or crypto symbol (e.g. AAPL, BTC-USD):", value="AAPL")
 period = st.selectbox("Select time period:", ["1mo", "3mo", "6mo", "1y"])
@@ -42,7 +31,7 @@ if symbol:
             )
         ])
 
-        # סימון אותות קנייה/מכירה
+        # Buy and Sell Signals
         buy_signals = df[df["Signal"] == "Buy"]
         sell_signals = df[df["Signal"] == "Sell"]
 
