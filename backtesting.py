@@ -27,3 +27,17 @@ def run_backtesting(df):
             position = None
 
     return pd.DataFrame(trades)
+
+def run_backtesting(df, signals):
+    results = []
+    for date, signal in signals:
+        entry_price = df.loc[date]["Close"]
+        future_data = df[df.index > date].head(5)  # טווח בדיקה: 5 ימים קדימה
+        success = any(future_data["Close"] > entry_price * 1.03) if signal == "Buy" else any(future_data["Close"] < entry_price * 0.97)
+        results.append({
+            "date": date,
+            "signal": signal,
+            "entry_price": entry_price,
+            "success": success
+        })
+    return pd.DataFrame(results)
