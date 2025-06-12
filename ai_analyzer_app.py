@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-from model_engine import stock_symbols, crypto_symbols, train_model, fetch_price_history, analyze_with_model
+from model_engine import stock_symbols, crypto_symbols, train_model, fetch_price_history
 from explanations import generate_explanation
 from utils import detect_trade_signals
 
