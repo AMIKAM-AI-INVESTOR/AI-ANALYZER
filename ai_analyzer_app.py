@@ -1,78 +1,64 @@
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go
+import numpy as np
 import yfinance as yf
 from datetime import datetime, timedelta
+import plotly.graph_objects as go
 
-from top10_data import get_top10_forecasts
-from backtesting import run_backtesting
+from utils import fetch_price_history, detect_trade_signals
 from fundamentals import get_fundamental_data
-from utils import detect_trade_signals, fetch_from_alternate_sources
+from backtesting import run_backtesting
+from top10_data import get_top10_predictions
 
-st.set_page_config(layout="wide", page_title="AI Analyzer - Stocks & Crypto")
-st.title("📊 AI Analyzer - Stocks & Crypto")
+st.set_page_config(layout="wide", page_title="AI Stock & Crypto Analyzer")
 
-# --- Section: Top 10 Forecasts ---
-top10_stocks, top10_crypto = get_top10_forecasts()
+st.title("📈 AI Stock & Crypto Analyzer")
 
-with st.expander("📈 Top 10 Forecasted Stocks", expanded=True):
-    st.dataframe(top10_stocks, use_container_width=True)
+# טבלאות טופ 10 (מניות וקריפטו)
+st.subheader("Top 10 Stocks Forecast")
+stocks_df = get_top10_predictions("stocks")
+st.dataframe(stocks_df, use_container_width=True)
 
-with st.expander("🪙 Top 10 Forecasted Cryptocurrencies", expanded=True):
-    st.dataframe(top10_crypto, use_container_width=True)
+st.subheader("Top 10 Crypto Forecast")
+crypto_df = get_top10_predictions("crypto")
+st.dataframe(crypto_df, use_container_width=True)
 
-# --- Section: Analyze a Specific Asset ---
-st.header("🔍 Analyze a Specific Asset")
-symbol = st.text_input("Enter a stock or crypto symbol (e.g. AAPL, BTC-USD):", value="AAPL")
-period = st.selectbox("Select time period:", ["1mo", "3mo", "6mo", "1y"])
+# חיפוש וניתוח נכס
+st.subheader("🔎 Analyze Specific Asset")
+symbol = st.text_input("Enter a stock or crypto symbol (e.g., AAPL, TSLA, BTC-USD)", "AAPL")
+if st.button("Analyze"):
+    df = fetch_price_history(symbol)
+    if df is not None:
+        df = detect_trade_signals(df)
 
-if symbol:
-    try:
-        df = yf.download(symbol, period=period)
-        if df.empty:
-            df = fetch_from_alternate_sources(symbol, period)
+        # גרף נרות עם איתותים
+        st.markdown("### Candlestick Chart with Signals")
+        fig = go.Figure(data=[
+            go.Candlestick(x=df.index, open=df['Open'], high=df['High'],
+                           low=df['Low'], close=df['Close'], name='Candlesticks')
+        ])
+        # סימון איתותים על הגרף
+        for i, row in df.iterrows():
+            if row['Signal'] == "Buy":
+                fig.add_trace(go.Scatter(x=[i], y=[row['Close']], mode='markers',
+                                         marker=dict(symbol="arrow-up", color="green", size=10), name="Buy"))
+            elif row['Signal'] == "Sell":
+                fig.add_trace(go.Scatter(x=[i], y=[row['Close']], mode='markers',
+                                         marker=dict(symbol="arrow-down", color="red", size=10), name="Sell"))
 
-        if df.empty:
-            st.warning("No valid data found for selected symbol or time range.")
+        st.plotly_chart(fig, use_container_width=True)
+
+        # ניתוח פנדומנטלי
+        st.markdown("### 📊 Fundamental Analysis")
+        fundamentals = get_fundamental_data(symbol)
+        if fundamentals is not None:
+            st.json(fundamentals)
         else:
-            df.dropna(inplace=True)
-            df["Signal"] = detect_trade_signals(df)
+            st.warning("No fundamental data found.")
 
-            st.subheader(f"{symbol.upper()} Candlestick Chart")
-            fig = go.Figure(data=[
-                go.Candlestick(
-                    x=df.index,
-                    open=df['Open'],
-                    high=df['High'],
-                    low=df['Low'],
-                    close=df['Close'],
-                    name='Candles'
-                ),
-                go.Scatter(
-                    x=df[df["Signal"] == "Buy"].index,
-                    y=df[df["Signal"] == "Buy"]["Close"],
-                    mode="markers",
-                    marker=dict(color="green", size=8),
-                    name="Buy Signal"
-                ),
-                go.Scatter(
-                    x=df[df["Signal"] == "Sell"].index,
-                    y=df[df["Signal"] == "Sell"]["Close"],
-                    mode="markers",
-                    marker=dict(color="red", size=8),
-                    name="Sell Signal"
-                )
-            ])
-            fig.update_layout(xaxis_rangeslider_visible=False, height=500)
-            st.plotly_chart(fig, use_container_width=True)
-
-            st.subheader("📉 AI Backtesting Results")
-            backtest_df = run_backtesting(df)
-            st.line_chart(backtest_df.set_index("Date"))
-
-            st.subheader("📊 Fundamental Data")
-            fundamentals = get_fundamental_data(symbol)
-            st.dataframe(fundamentals)
-
-    except Exception as e:
-        st.error(f"Error loading data: {e}")
+        # ביצוע סימולציה של backtesting
+        st.markdown("### 🧪 Backtesting")
+        bt_result = run_backtesting(df)
+        st.write(bt_result)
+    else:
+        st.error("Failed to retrieve data. Try a different symbol.")
