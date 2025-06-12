@@ -16,7 +16,7 @@ st.title("📈 AI Stock & Crypto Analyzer")
 
 # טבלאות טופ 10 (מניות וקריפטו)
 st.subheader("Top 10 Stocks Forecast")
-stocks_df = get_top10_predictions("stocks")
+stocks_df = get_top10_forecasts("stocks")
 st.dataframe(stocks_df, use_container_width=True)
 
 st.subheader("Top 10 Crypto Forecast")
