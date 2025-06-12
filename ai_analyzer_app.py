@@ -68,7 +68,24 @@ if symbol:
                     decreasing_line_color='red'
                 )
             ])
-            st.plotly_chart(fig, use_container_width=True)
+            
+# Add pattern annotations
+for date, pattern_name in patterns:
+    if date in df.index:
+        price = df.loc[date]['High']
+        fig.add_annotation(
+            x=date,
+            y=price,
+            text=pattern_name,
+            showarrow=True,
+            arrowhead=1,
+            ax=0,
+            ay=-40,
+            font=dict(color="blue"),
+            bgcolor="rgba(255,255,255,0.9)"
+        )
+
+st.plotly_chart(fig, use_container_width=True)
 
             # Backtesting
             st.subheader("📉 AI Backtesting Results")
