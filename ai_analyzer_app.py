@@ -30,11 +30,14 @@ if symbol:
     try:
         df = yf.download(symbol, period=period)
         df.dropna(inplace=True)
-        df = detect_trade_signals(df)
 
-        if df.empty or not {'Open', 'High', 'Low', 'Close'}.issubset(df.columns):
+        if df.empty or not all(col in df.columns for col in ['Open', 'High', 'Low', 'Close']):
             st.warning("No valid data found for selected symbol or time range.")
         else:
+            df = detect_trade_signals(df)
+
+            # Candlestick Chart
+            st.subheader(f"{symbol.upper()} Candlestick Chart")
             fig = go.Figure(data=[
                 go.Candlestick(
                     x=df.index,
@@ -42,47 +45,39 @@ if symbol:
                     high=df['High'],
                     low=df['Low'],
                     close=df['Close'],
-                    name="Candlestick"
+                    name="Price"
                 )
             ])
 
-            # Add buy/sell signal markers
+            # Add Buy/Sell signals
             if "Signal" in df.columns:
                 buy_signals = df[df['Signal'] == 'Buy']
                 sell_signals = df[df['Signal'] == 'Sell']
+                fig.add_trace(go.Scatter(x=buy_signals.index, y=buy_signals['Close'],
+                                         mode='markers', marker=dict(color='green', size=10),
+                                         name='Buy Signal'))
+                fig.add_trace(go.Scatter(x=sell_signals.index, y=sell_signals['Close'],
+                                         mode='markers', marker=dict(color='red', size=10),
+                                         name='Sell Signal'))
 
-                fig.add_trace(go.Scatter(
-                    x=buy_signals.index,
-                    y=buy_signals['Close'],
-                    mode='markers',
-                    marker=dict(color='green', size=8),
-                    name='Buy Signal'
-                ))
-
-                fig.add_trace(go.Scatter(
-                    x=sell_signals.index,
-                    y=sell_signals['Close'],
-                    mode='markers',
-                    marker=dict(color='red', size=8),
-                    name='Sell Signal'
-                ))
-
-            fig.update_layout(title=f"{symbol} Candlestick Chart", xaxis_title="Date", yaxis_title="Price")
+            fig.update_layout(xaxis_title="Date", yaxis_title="Price", height=600)
             st.plotly_chart(fig, use_container_width=True)
 
+            # Backtesting Section
             st.subheader("📉 AI Backtesting Results")
             try:
                 backtest_df = run_backtesting(df)
                 st.line_chart(backtest_df)
             except Exception as e:
-                st.error(f"Backtesting error: {e}")
+                st.error(f"Backtesting Error: {e}")
 
-            st.subheader("📑 Fundamental Analysis")
+            # Fundamentals
+            st.subheader("📊 Fundamental Data")
             try:
-                fundamentals = get_fundamental_data(symbol)
-                st.json(fundamentals)
+                fund_data = get_fundamental_data(symbol)
+                st.dataframe(pd.DataFrame.from_dict(fund_data, orient="index", columns=["Value"]))
             except Exception as e:
-                st.error(f"Fundamental data error: {e}")
+                st.error(f"Fundamental Data Error: {e}")
 
     except Exception as e:
-        st.error(f"Error: {e}")
+        st.error(f"Error loading data: {e}")
