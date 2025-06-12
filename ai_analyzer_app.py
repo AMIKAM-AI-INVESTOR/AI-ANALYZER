@@ -91,6 +91,8 @@ st.plotly_chart(fig, use_container_width=True)
             st.subheader("📉 AI Backtesting Results")
             try:
                 backtest_df = run_backtesting(df)
+            except Exception as e:
+                st.error(f"Backtesting failed: {str(e)}")
                 st.line_chart(backtest_df)
             except Exception as e:
                 st.error(f"Backtesting failed: {str(e)}")
