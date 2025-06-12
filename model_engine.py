@@ -2,8 +2,8 @@
 import xgboost as xgb
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
 import yfinance as yf
+from explanations import generate_explanation
 
 # רשימות סימולים
 stock_symbols = ["AAPL", "MSFT", "GOOGL", "META", "NVDA", "TSLA", "AMZN", "NFLX", "AMD", "INTC"]
@@ -14,65 +14,46 @@ def fetch_data(symbol, period="1y"):
     df = yf.download(symbol, period=period, interval="1d", progress=False)
     return df if not df.empty else None
 
-# יצירת פיצ'רים עם בדיקות
+# פיצ'רים בסיסיים
 def create_features(df):
-    if df is None or df.empty:
-        return pd.DataFrame()
-    if 'Close' not in df.columns:
-        print(f"❗ נתונים חסרים: אין עמודת Close")
-        return pd.DataFrame()
     df['return'] = df['Close'].pct_change()
     df['ma5'] = df['Close'].rolling(window=5).mean()
     df['ma20'] = df['Close'].rolling(window=20).mean()
     df['std'] = df['Close'].rolling(window=20).std()
-    df['target'] = df['Close'].shift(-10) / df['Close'] - 1
+    df['target'] = df['Close'].shift(-10) / df['Close'] - 1  # אחוז שינוי 10 ימים קדימה
     df = df.dropna()
     return df
 
-# אימון מודל XGBoost
+# אימון מודל
 def train_model(X_train, y_train):
     model = xgb.XGBRegressor(objective='reg:squarederror', n_estimators=100)
     model.fit(X_train, y_train)
     return model
 
-# ניתוח עם המודל כולל דיבאג
-def analyze_with_model(model, symbol_list, asset_type):
+# ניתוח תחזית עם הסבר
+def analyze_with_model(model, symbols, asset_type):
     results = []
-    for symbol in symbol_list:
-        try:
-            df = fetch_data(symbol, period="6mo")
-            if df is None or len(df) < 30:
-                print(f"❌ לא התקבלו נתונים עבור {symbol}")
-                continue
-
-            name = symbol
-            features_df = create_features(df.copy())
-            if features_df.empty:
-                print(f"⚠️ אין פיצ'רים אחרי חישוב עבור {symbol}")
-                continue
-
-            X_pred = features_df[["return", "ma5", "ma20", "std"]]
-            y_pred = model.predict(X_pred)
-            forecast_pct = round(float(y_pred[-1] * 100), 2)
-
-            current_price = round(float(df["Close"].iloc[-1]), 2)
+    for symbol in symbols:
+        df = fetch_data(symbol)
+        if df is not None:
+            df_feat = create_features(df)
+            X_pred = df_feat[["return", "ma5", "ma20", "std"]]
+            prediction = model.predict(X_pred)
+            forecast_pct = round(prediction[-1] * 100, 2)
+            current_price = round(df["Close"].iloc[-1], 2)
             target_price = round(current_price * (1 + forecast_pct / 100), 2)
             forecast_days = 10
-            timestamp = df.index[-1].strftime("%Y-%m-%d")
+            confidence = round(np.std(prediction[-5:]) * 100, 2)
+            explanation = generate_explanation(df)
 
             results.append({
                 "סימול": symbol,
-                "שם מלא": name,
                 "סוג": asset_type,
                 "שער נוכחי": current_price,
                 "תחזית (%)": forecast_pct,
                 "שער תחזית": target_price,
                 "יעד (ימים)": forecast_days,
-                "תאריך איתות": timestamp
+                "ביטחון (%)": 100 - confidence,
+                "הסבר התחזית": explanation
             })
-
-        except Exception as e:
-            print(f"🚫 שגיאה בניתוח {symbol}: {e}")
-            continue
-
     return pd.DataFrame(results)
