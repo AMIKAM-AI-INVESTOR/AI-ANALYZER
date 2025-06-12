@@ -70,7 +70,22 @@ if symbol:
                         )
             except Exception as e:
                 st.warning(f"Pattern annotation failed: {e}")
-
+    for date, pattern_name in patterns:
+        if date in df.index:
+            price = df.loc[date]['High']
+            fig.add_annotation(
+                x=date,
+                y=price,
+                text=pattern_name,
+                showarrow=True,
+                arrowhead=1,
+                ax=0,
+                ay=-40,
+                font=dict(color="blue"),
+                bgcolor="rgba(255,255,255,0.9)"
+            )
+except Exception as e:
+    st.warning(f"Pattern annotation failed: {e}")
 
 
 # Candlestick chart
@@ -106,7 +121,22 @@ if symbol:
                         )
             except Exception as e:
                 st.warning(f"Pattern annotation failed: {e}")
-
+    for date, pattern_name in patterns:
+        if date in df.index:
+            price = df.loc[date]['High']
+            fig.add_annotation(
+                x=date,
+                y=price,
+                text=pattern_name,
+                showarrow=True,
+                arrowhead=1,
+                ax=0,
+                ay=-40,
+                font=dict(color="blue"),
+                bgcolor="rgba(255,255,255,0.9)"
+            )
+except Exception as e:
+    st.warning(f"Pattern annotation failed: {e}")
 
 
 st.plotly_chart(fig, use_container_width=True)
@@ -115,6 +145,9 @@ st.plotly_chart(fig, use_container_width=True)
             st.subheader("📉 AI Backtesting Results")
             try:
                 backtest_df = run_backtesting(df)
+                st.line_chart(backtest_df)
+            except Exception as e:
+                st.error(f"Backtesting failed: {str(e)}")
             except Exception as e:
                 st.error(f"Backtesting failed: {str(e)}")
                 st.line_chart(backtest_df)
