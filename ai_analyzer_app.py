@@ -57,6 +57,8 @@ if symbol:
                 recent_pct_change = (df["Close"].iloc[-1] - df["Close"].iloc[-5]) / df["Close"].iloc[-5]
                 risk_eval = predict_from_memory_model(trained_model, df["Close"].iloc[-1], recent_pct_change)
                 st.markdown(f"📊 **Risk Evaluation (based on past success patterns):** {risk_eval}")
+            except Exception as e:
+                st.warning(f"Risk evaluation failed: {e}")
 
             # Detect chart patterns
             patterns = detect_head_and_shoulders(df) + detect_flags(df)
