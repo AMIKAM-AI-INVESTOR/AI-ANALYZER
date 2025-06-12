@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import yfinance as yf
-from utils import detect_trade_signals
+from data_fetcher import fetch_price_history
 
 st.set_page_config(page_title="AI Analyzer - Stocks & Crypto", layout="wide")
 st.title("📊 AI Analyzer - Stocks & Crypto")
