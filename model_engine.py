@@ -2,6 +2,15 @@ import pandas as pd
 import numpy as np
 from explanations import generate_explanation
 
+stock_symbols = ["AAPL", "MSFT", "GOOGL", "META", "AMZN", "NVDA", "TSLA", "NFLX", "INTC", "AMD"]
+crypto_symbols = ["BTC-USD", "ETH-USD", "BNB-USD", "SOL-USD", "ADA-USD", "XRP-USD", "DOGE-USD", "DOT-USD", "AVAX-USD", "MATIC-USD"]
+
+def fetch_data(symbol):
+    import yfinance as yf
+    df = yf.download(symbol, period="6mo", interval="1d", progress=False)
+    df = df.dropna()
+    return df
+
 def create_features(df):
     df = df.copy()
     df['return'] = df['Close'].pct_change()
@@ -11,19 +20,11 @@ def create_features(df):
     return df
 
 def train_model(df):
-    # בשלב זה הפונקציה מדמה אימון – בהמשך נשלב ML אמיתי
     return "model_trained_placeholder"
 
 def predict(df):
-    # חיזוי מדומה – בגרסה הבאה נוסיף תחזית חכמה
     df = df.copy()
     df['prediction'] = df['Close'].shift(-1)
-    return df
-
-def fetch_data(symbol):
-    import yfinance as yf
-    df = yf.download(symbol, period="6mo", interval="1d", progress=False)
-    df = df.dropna()
     return df
 
 def analyze_with_model(model, symbols, asset_type="stock"):
