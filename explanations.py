@@ -1,4 +1,5 @@
 import pandas as pd
+
 def generate_explanation(df):
     latest_close = df['Close'].iloc[-1]
     ma5 = df['ma5'].iloc[-1]
