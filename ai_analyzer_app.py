@@ -132,3 +132,7 @@ if symbol:
                 st.plotly_chart(fig, use_container_width=True)
             except Exception:
                 st.warning("⚠️ Failed to render chart. Check data format.")
+
+from ai_engine import train_predict_xgb
+
+prediction, confidence = train_predict_xgb(df)
