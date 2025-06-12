@@ -50,6 +50,17 @@ if symbol:
             ai_signal = predict_signal(model, df)
             st.markdown(f"### 🤖 AI Prediction: **{ai_signal}**")
 
+            # Evaluate with memory-trained model
+            from ai_model_trained_from_memory import train_model_from_memory, predict_from_memory_model
+            trained_model = train_model_from_memory()
+            try:
+                recent_pct_change = (df["Close"].iloc[-1] - df["Close"].iloc[-5]) / df["Close"].iloc[-5]
+                risk_eval = predict_from_memory_model(trained_model, df["Close"].iloc[-1], recent_pct_change)
+                st.markdown(f"📊 **Risk Evaluation (based on past success patterns):** {risk_eval}")
+            except Exception as e:
+                st.warning(f"Risk evaluation failed: {e}")
+
+
             # Detect chart patterns
             patterns = detect_head_and_shoulders(df) + detect_flags(df)
             
@@ -70,23 +81,6 @@ if symbol:
                         )
             except Exception as e:
                 st.warning(f"Pattern annotation failed: {e}")
-    for date, pattern_name in patterns:
-        if date in df.index:
-            price = df.loc[date]['High']
-            fig.add_annotation(
-                x=date,
-                y=price,
-                text=pattern_name,
-                showarrow=True,
-                arrowhead=1,
-                ax=0,
-                ay=-40,
-                font=dict(color="blue"),
-                bgcolor="rgba(255,255,255,0.9)"
-            )
-except Exception as e:
-    st.warning(f"Pattern annotation failed: {e}")
-
 
 # Candlestick chart
             st.subheader(f"{symbol} Candlestick Chart")
@@ -121,23 +115,6 @@ except Exception as e:
                         )
             except Exception as e:
                 st.warning(f"Pattern annotation failed: {e}")
-    for date, pattern_name in patterns:
-        if date in df.index:
-            price = df.loc[date]['High']
-            fig.add_annotation(
-                x=date,
-                y=price,
-                text=pattern_name,
-                showarrow=True,
-                arrowhead=1,
-                ax=0,
-                ay=-40,
-                font=dict(color="blue"),
-                bgcolor="rgba(255,255,255,0.9)"
-            )
-except Exception as e:
-    st.warning(f"Pattern annotation failed: {e}")
-
 
 st.plotly_chart(fig, use_container_width=True)
 
