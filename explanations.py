@@ -1,12 +1,15 @@
 import pandas as pd
 
 def generate_explanation(df):
-    latest_close = df['Close'].iloc[-1]
-    ma5 = df['ma5'].iloc[-1]
-    ma20 = df['ma20'].iloc[-1]
-    std = df['std'].iloc[-1]
-
     explanation_parts = []
+
+    try:
+        latest_close = df['Close'].iloc[-1]
+        ma5 = df['ma5'].iloc[-1]
+        ma20 = df['ma20'].iloc[-1]
+        std = df['std'].iloc[-1]
+    except Exception:
+        return "שגיאה בשליפת נתונים – אין מספיק מידע לניתוח"
 
     if pd.notna(latest_close) and pd.notna(ma5) and pd.notna(ma20):
         if latest_close > ma5 and ma5 > ma20:
