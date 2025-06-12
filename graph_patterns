@@ -1,82 +1,58 @@
 import pandas as pd
-import numpy as np
 
-def detect_head_and_shoulders(df, window=5):
-    """
-    Detect Head and Shoulders pattern in price data.
+def detect_head_and_shoulders(df):
+    # זיהוי תבנית ראש וכתפיים באופן בסיסי על סמך מחירים אחרונים
+    if len(df) < 7:
+        return False, None
 
-    Returns:
-        str: Pattern detected or None.
-    """
-    if len(df) < window * 5:
-        return None
+    highs = df['High'].values[-7:]
+    if highs[0] < highs[1] and highs[1] > highs[2] and highs[2] < highs[3] and highs[3] < highs[4] and highs[4] > highs[5] and highs[5] < highs[6]:
+        return True, "Head & Shoulders"
 
-    highs = df['High'].rolling(window=window).max()
-    pattern = []
+    return False, None
 
-    for i in range(window * 2, len(highs) - window * 2):
-        l_shoulder = highs[i - window * 2:i - window].max()
-        head = highs[i - window:i + window].max()
-        r_shoulder = highs[i + window:i + window * 2].max()
+def detect_cup_and_handle(df):
+    # זיהוי תבנית כוס עם ידית (Cup with Handle) בצורה פשטנית
+    close = df['Close'].values[-20:]
+    if len(close) < 20:
+        return False, None
 
-        if l_shoulder < head and r_shoulder < head and abs(l_shoulder - r_shoulder) / head < 0.1:
-            pattern.append((df.index[i], 'Head and Shoulders'))
+    min_idx = close.argmin()
+    if min_idx > 5 and min_idx < 15:
+        left = close[:min_idx]
+        right = close[min_idx+1:]
+        if max(left) > close[min_idx] and max(right) > close[min_idx]:
+            return True, "Cup with Handle"
 
-    return pattern if pattern else None
+    return False, None
 
-def detect_ascending_triangle(df, lookback=20):
-    """
-    Detect ascending triangle pattern.
+def detect_flags(df):
+    # בדיקת תבנית דגל (Flag pattern)
+    if len(df) < 10:
+        return False, None
 
-    Returns:
-        str: Pattern detected or None.
-    """
-    highs = df['High'].rolling(window=lookback).max()
-    lows = df['Low'].rolling(window=lookback).min()
+    recent_close = df['Close'].values[-10:]
+    change = (recent_close[-1] - recent_close[0]) / recent_close[0]
 
-    recent_high = highs.iloc[-1]
-    recent_lows = lows[-lookback:]
+    if abs(change) < 0.05:
+        return True, "Flag Pattern"
 
-    ascending = all(recent_lows[i] < recent_lows[i+1] for i in range(len(recent_lows) - 1))
+    return False, None
 
-    if ascending and abs(highs.iloc[-1] - recent_high) < 0.02 * recent_high:
-        return [(df.index[-1], 'Ascending Triangle')]
-
-    return None
-
-def detect_bullish_channel(df, lookback=20):
-    """
-    Detect upward channel pattern.
-
-    Returns:
-        str: Pattern detected or None.
-    """
-    highs = df['High'][-lookback:]
-    lows = df['Low'][-lookback:]
-
-    trend_up = all(highs[i] < highs[i+1] for i in range(len(highs) - 1))
-    trend_low = all(lows[i] < lows[i+1] for i in range(len(lows) - 1))
-
-    if trend_up and trend_low:
-        return [(df.index[-1], 'Bullish Channel')]
-
-    return None
-
-def detect_patterns(df):
-    """
-    Wrapper to detect all patterns and return list.
-    """
+def detect_graph_pattern(df):
+    # פונקציה מרכזית שמחפשת תבניות מוכרות
     patterns = []
-    hs = detect_head_and_shoulders(df)
+
+    hs, name = detect_head_and_shoulders(df)
     if hs:
-        patterns.extend(hs)
+        patterns.append(name)
 
-    at = detect_ascending_triangle(df)
-    if at:
-        patterns.extend(at)
-
-    ch = detect_bullish_channel(df)
+    ch, name = detect_cup_and_handle(df)
     if ch:
-        patterns.extend(ch)
+        patterns.append(name)
 
-    return patterns
+    flg, name = detect_flags(df)
+    if flg:
+        patterns.append(name)
+
+    return patterns if patterns else ["אין תבנית מזוהה"]
