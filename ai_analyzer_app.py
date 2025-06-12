@@ -120,3 +120,25 @@ st.plotly_chart(fig, use_container_width=True)
                 st.error(f"Backtesting failed: {str(e)}")
     except Exception as e:
         st.error(f"Error loading data: {str(e)}")
+
+
+# -------------------------
+# 📊 Pattern Success Summary Section
+# -------------------------
+st.header("📊 Pattern Success Rates (Across Assets)")
+
+with st.expander("Click to run multi-asset pattern analysis"):
+    user_symbols = st.text_input("Enter stock/crypto symbols separated by commas", value="AAPL,MSFT,NVDA,TSLA,BTC-USD,ETH-USD")
+    symbols_list = [sym.strip() for sym in user_symbols.split(",") if sym.strip()]
+    if st.button("Analyze Patterns"):
+        from multi_asset_trainer import train_on_multiple_symbols
+        from pattern_success_stats import summarize_pattern_stats
+
+        with st.spinner("Analyzing patterns across multiple assets..."):
+            stats_df = train_on_multiple_symbols(symbols_list)
+            if stats_df.empty:
+                st.warning("No patterns found for selected symbols.")
+            else:
+                summary_df = summarize_pattern_stats(stats_df)
+                st.success("Pattern analysis completed!")
+                st.dataframe(summary_df, use_container_width=True)
