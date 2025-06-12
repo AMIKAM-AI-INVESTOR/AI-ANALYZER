@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 import yfinance as yf
 from datetime import datetime, timedelta
 
-from top10_data import load_top10_forecasts
+from top10_data import get_top10_forecasts
 from backtesting import run_backtesting
 from fundamentals import get_fundamental_data
 from utils import detect_trade_signals
