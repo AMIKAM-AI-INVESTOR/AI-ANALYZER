@@ -16,13 +16,13 @@ def get_latest_prices(tickers):
 def calculate_target_price(price, percent):
     return round(price * (1 + percent / 100), 2)
 
-# Top 10 data
+# Forecasted tables
 stock_symbols = ["AAPL", "TSLA", "NVDA", "MSFT", "META", "GOOGL", "AMZN", "CRM", "NFLX", "INTC"]
 crypto_symbols = ["BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD", "ADA-USD", "XRP-USD", "DOGE-USD", "DOT-USD", "AVAX-USD", "MATIC-USD"]
 all_symbols = stock_symbols + crypto_symbols
 prices = get_latest_prices(all_symbols)
 
-# STOCK TABLE
+# Stocks Table
 st.subheader("📈 Top 10 Forecasted Stocks")
 stock_df = pd.DataFrame({
     "Symbol": stock_symbols,
@@ -48,7 +48,7 @@ stock_df["Target Price"] = stock_df.apply(lambda row: calculate_target_price(row
 cols = ["Symbol", "Name", "Current Price", "Predicted Change (%)", "Target Price", "Target Time", "Confidence", "Forecast Explanation (Hebrew)"]
 st.dataframe(stock_df[cols])
 
-# CRYPTO TABLE
+# Cryptos Table
 st.subheader("💹 Top 10 Forecasted Cryptocurrencies")
 crypto_df = pd.DataFrame({
     "Symbol": crypto_symbols,
@@ -73,7 +73,7 @@ crypto_df = pd.DataFrame({
 crypto_df["Target Price"] = crypto_df.apply(lambda row: calculate_target_price(row["Current Price"], row["Predicted Change (%)"]), axis=1)
 st.dataframe(crypto_df[cols])
 
-# Analyze Specific Asset
+# Asset Analysis
 st.markdown("## 🔍 Analyze a Specific Asset")
 symbol = st.text_input("Enter a stock or crypto symbol (e.g. AAPL, BTC-USD):", value="AAPL")
 period = st.selectbox("Select time period:", ["1mo", "3mo", "6mo", "1y", "2y"], index=2)
@@ -83,56 +83,59 @@ if symbol:
         df = fetch_price_history(symbol, period=period)
         df = detect_trade_signals(df)
 
-        # Fix types
+        # Prepare and validate
         df = df.copy()
         df.index = pd.to_datetime(df.index)
-        for col in ["Open", "High", "Low", "Close"]:
-            df[col] = pd.to_numeric(df[col], errors="coerce")
-
-        if not df.empty:
-            st.write("📊 Sample data for debugging:")
-            st.write(df.tail())
-
-            fig = go.Figure(data=[
-                go.Candlestick(
-                    x=df.index,
-                    open=df["Open"],
-                    high=df["High"],
-                    low=df["Low"],
-                    close=df["Close"],
-                    name="Candlestick"
-                )
-            ])
-            for i in range(len(df)):
-                if df["Signal"].iloc[i] == "Buy":
-                    fig.add_trace(go.Scatter(x=[df.index[i]], y=[df["Close"].iloc[i]],
-                                             mode="markers", marker=dict(color="green", size=10),
-                                             name="Buy Signal"))
-                elif df["Signal"].iloc[i] == "Sell":
-                    fig.add_trace(go.Scatter(x=[df.index[i]], y=[df["Close"].iloc[i]],
-                                             mode="markers", marker=dict(color="red", size=10),
-                                             name="Sell Signal"))
-
-            fig.update_layout(title=f"{symbol.upper()} Candlestick Chart", xaxis_title="Date", yaxis_title="Price")
-            st.plotly_chart(fig, use_container_width=True)
-
-            st.subheader("🧠 Fundamental Analysis (Demo)")
-            fundamentals_demo = {
-                "P/E Ratio": 28.5,
-                "EPS (TTM)": 5.23,
-                "Market Cap": "1.3T",
-                "Sector": "Technology",
-                "Dividend Yield": "0.55%",
-                "Debt/Equity": 1.5,
-                "Insider Ownership": "0.75%",
-                "Analyst Rating": "Buy",
-                "12-Month Price Target": "$210",
-                "Support Zone": "$195-$198",
-                "Technical Trend": "Uptrend",
-                "Forecast Explanation (Hebrew)": "המערכת זיהתה דגל שורי על רקע תנועה יציבה, מחזורים גבוהים, ורקע פנדומנטלי חזק"
-            }
-            st.json(fundamentals_demo)
+        required_columns = ["Open", "High", "Low", "Close"]
+        missing_cols = [col for col in required_columns if col not in df.columns]
+        if missing_cols:
+            st.warning(f"Missing required columns: {missing_cols}")
         else:
-            st.warning("⚠️ No valid price data available to show chart for this asset.")
+            df = df.dropna(subset=required_columns)
+            for col in required_columns:
+                df[col] = pd.to_numeric(df[col], errors="coerce")
+
+            if df.empty or df[required_columns].isnull().any().any():
+                st.warning("⚠️ No valid candlestick data to display.")
+            else:
+                fig = go.Figure(data=[
+                    go.Candlestick(
+                        x=df.index,
+                        open=df["Open"],
+                        high=df["High"],
+                        low=df["Low"],
+                        close=df["Close"],
+                        name="Candlestick"
+                    )
+                ])
+                for i in range(len(df)):
+                    if df["Signal"].iloc[i] == "Buy":
+                        fig.add_trace(go.Scatter(x=[df.index[i]], y=[df["Close"].iloc[i]],
+                                                 mode="markers", marker=dict(color="green", size=10),
+                                                 name="Buy Signal"))
+                    elif df["Signal"].iloc[i] == "Sell":
+                        fig.add_trace(go.Scatter(x=[df.index[i]], y=[df["Close"].iloc[i]],
+                                                 mode="markers", marker=dict(color="red", size=10),
+                                                 name="Sell Signal"))
+
+                fig.update_layout(title=f"{symbol.upper()} Candlestick Chart", xaxis_title="Date", yaxis_title="Price")
+                st.plotly_chart(fig, use_container_width=True)
+
+                st.subheader("🧠 Fundamental Analysis (Demo)")
+                fundamentals_demo = {
+                    "P/E Ratio": 28.5,
+                    "EPS (TTM)": 5.23,
+                    "Market Cap": "1.3T",
+                    "Sector": "Technology",
+                    "Dividend Yield": "0.55%",
+                    "Debt/Equity": 1.5,
+                    "Insider Ownership": "0.75%",
+                    "Analyst Rating": "Buy",
+                    "12-Month Price Target": "$210",
+                    "Support Zone": "$195-$198",
+                    "Technical Trend": "Uptrend",
+                    "Forecast Explanation (Hebrew)": "המערכת זיהתה דגל שורי על רקע תנועה יציבה, מחזורים גבוהים, ורקע פנדומנטלי חזק"
+                }
+                st.json(fundamentals_demo)
     except Exception as e:
         st.error(f"❌ Error: {e}")
