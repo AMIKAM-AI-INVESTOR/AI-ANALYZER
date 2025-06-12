@@ -9,6 +9,8 @@ from top10_data import get_top10_forecasts
 from backtesting import run_backtesting
 from fundamentals import get_fundamental_data
 from utils import detect_trade_signals
+from pattern_recognition import detect_head_and_shoulders, detect_flags
+from ai_model import train_basic_ai_model, predict_signal
 
 st.set_page_config(layout="wide", page_title="AI Stock & Crypto Analyzer")
 st.title("📊 AI Stock & Crypto Analyzer")
@@ -42,7 +44,18 @@ if symbol:
             df.dropna(inplace=True)
             df = detect_trade_signals(df)
 
-            # Candlestick chart
+            
+            # Train AI model
+            model = train_basic_ai_model(df)
+            ai_signal = predict_signal(model, df)
+            st.markdown(f"### 🤖 AI Prediction: **{ai_signal}**")
+
+            # Detect chart patterns
+            patterns = detect_head_and_shoulders(df) + detect_flags(df)
+            for date, pattern_name in patterns:
+                st.markdown(f"🔍 Pattern Detected: **{pattern_name}** on {date.date()}")
+
+# Candlestick chart
             st.subheader(f"{symbol} Candlestick Chart")
             fig = go.Figure(data=[
                 go.Candlestick(
