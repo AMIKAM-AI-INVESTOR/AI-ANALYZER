@@ -17,11 +17,12 @@ def analyze_symbol(symbol):
         ai_result = predict_signal(ai_model, df)
 
         memory_model = train_model_from_memory()
-        recent_pct = (df["Close"].iloc[-1] - df["Close"].iloc[-5]) / df["Close"].iloc[-5]
-        risk = predict_from_memory_model(memory_model, df["Close"].iloc[-1], recent_pct)
+        close_price = df["Close"].iloc[-1]
+        recent_pct = (close_price - df["Close"].iloc[-5]) / df["Close"].iloc[-5]
+        risk = predict_from_memory_model(memory_model, float(close_price), float(recent_pct))
 
         message = f"📊 **Analysis for {symbol.upper()}**\n"
-        message += f"🔹 Current Price: {df['Close'].iloc[-1]:.2f}\n"
+        message += f"🔹 Current Price: {close_price:.2f}\n"
         message += f"🔹 Detected Patterns: {', '.join(pattern_names) if pattern_names else 'None'}\n"
         message += f"🔹 AI Forecast: {ai_result}\n"
         message += f"🔹 Risk Level (based on memory): {risk}\n"
