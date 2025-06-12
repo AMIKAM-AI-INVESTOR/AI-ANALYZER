@@ -57,18 +57,18 @@ if symbol:
                 recent_pct_change = (df["Close"].iloc[-1] - df["Close"].iloc[-5]) / df["Close"].iloc[-5]
                 risk_eval = predict_from_memory_model(trained_model, df["Close"].iloc[-1], recent_pct_change)
                 st.markdown(f"📊 **Risk Evaluation (based on past success patterns):** {risk_eval}")
-            except Exception as e:
-                st.warning(f"Risk evaluation failed: {e}")
-
 
             # Detect chart patterns
             patterns = detect_head_and_shoulders(df) + detect_flags(df)
             
             try:
+            try:
                 for date, pattern_name in patterns:
                     if date in df.index:
                         price = df.loc[date]['High']
                         fig.add_annotation(
+            except Exception as e:
+                st.warning(f"Pattern annotation failed: {e}")
                             x=date,
                             y=price,
                             text=pattern_name,
@@ -79,9 +79,6 @@ if symbol:
                             font=dict(color="blue"),
                             bgcolor="rgba(255,255,255,0.9)"
                         )
-            except Exception as e:
-                st.warning(f"Pattern annotation failed: {e}")
-
 # Candlestick chart
             st.subheader(f"{symbol} Candlestick Chart")
             fig = go.Figure(data=[
@@ -99,10 +96,13 @@ if symbol:
 # Add pattern annotations
 
             try:
+            try:
                 for date, pattern_name in patterns:
                     if date in df.index:
                         price = df.loc[date]['High']
                         fig.add_annotation(
+            except Exception as e:
+                st.warning(f"Pattern annotation failed: {e}")
                             x=date,
                             y=price,
                             text=pattern_name,
@@ -113,9 +113,6 @@ if symbol:
                             font=dict(color="blue"),
                             bgcolor="rgba(255,255,255,0.9)"
                         )
-            except Exception as e:
-                st.warning(f"Pattern annotation failed: {e}")
-
 st.plotly_chart(fig, use_container_width=True)
 
             # Backtesting
@@ -123,16 +120,6 @@ st.plotly_chart(fig, use_container_width=True)
             try:
                 backtest_df = run_backtesting(df)
                 st.line_chart(backtest_df)
-            except Exception as e:
-                st.error(f"Backtesting failed: {str(e)}")
-            except Exception as e:
-                st.error(f"Backtesting failed: {str(e)}")
-                st.line_chart(backtest_df)
-            except Exception as e:
-                st.error(f"Backtesting failed: {str(e)}")
-    except Exception as e:
-        st.error(f"Error loading data: {str(e)}")
-
 
 # -------------------------
 # 📊 Pattern Success Summary Section
@@ -171,5 +158,15 @@ with st.expander("Click to view pattern performance from past forecasts"):
         else:
             st.success("Memory-based pattern performance loaded.")
             st.dataframe(memory_df, use_container_width=True)
-    except Exception as e:
-        st.error(f"Failed to load memory log summary: {e}")
+
+# -------------------------
+# 🤖 Real-Time Bot Advisor
+# -------------------------
+st.header("🤖 Ask the Analyzer Bot")
+
+with st.expander("Ask a question like: What about TSLA?"):
+    user_query = st.text_input("Ask about a stock or crypto symbol (e.g. TSLA, BTC-USD):", value="TSLA")
+    if st.button("Analyze Now"):
+        from realtime_bot import analyze_symbol
+        response = analyze_symbol(user_query)
+        st.markdown(response)
