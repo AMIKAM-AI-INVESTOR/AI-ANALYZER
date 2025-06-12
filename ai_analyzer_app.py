@@ -95,7 +95,6 @@ if symbol:
 # Add pattern annotations
 
             try:
-            try:
                 for date, pattern_name in patterns:
                     if date in df.index:
                         price = df.loc[date]['High']
