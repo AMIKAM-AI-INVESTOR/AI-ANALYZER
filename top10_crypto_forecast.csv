@@ -1,0 +1,11 @@
+Symbol,Name,Current Price,Predicted Change (%),Target Price,Target Time,Confidence,Forecast Explanation (Hebrew)
+BTC-USD,Bitcoin,108281.27,22.7,132861.12,3d,0.97,זיהוי תבנית שורית + גידול בביקושים.
+ETH-USD,Ethereum,2765.06,18.9,3287.66,4d,0.95,נתונים חזקים מהמולקצייה + פריצה טכנית.
+SOL-USD,Solana,143.55,14.3,164.07,6d,0.91,פריצה מטווח דשדוש + MACD שורי.
+BNB-USD,Binance Coin,590.32,9.2,644.73,5d,0.89,תמיכה בפיבונאצ'י + ממוצע נע עולה.
+AVAX-USD,Avalanche,29.42,16.4,34.26,6d,0.92,קונסולידציה עם breakout.
+LTC-USD,Litecoin,84.16,7.6,90.55,7d,0.88,תמיכה ב-RSI נמוך + איתות קנייה.
+XRP-USD,XRP,0.55,10.5,0.61,4d,0.9,נר בולען + נפח קנייה קיצוני.
+DOGE-USD,Dogecoin,0.127,12.3,0.143,3d,0.91,שבירת התנגדות חזקה + נר בוליש.
+MATIC-USD,Polygon,0.723,11.7,0.807,5d,0.89,תבנית משולש שורי + תמחור נמוך.
+UNI-USD,Uniswap,11.65,15.5,13.45,5d,0.9,אינדיקציות חיוביות לפי Bollinger Bands.
