@@ -8,7 +8,7 @@ import plotly.graph_objects as go
 from utils import fetch_price_history, detect_trade_signals
 from fundamentals import get_fundamental_data
 from backtesting import run_backtesting
-from top10_data import get_top10_predictions
+from top10_data import get_top10_forecasts
 
 st.set_page_config(layout="wide", page_title="AI Stock & Crypto Analyzer")
 
