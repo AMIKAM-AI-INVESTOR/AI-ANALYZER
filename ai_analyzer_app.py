@@ -62,7 +62,6 @@ if symbol:
             patterns = detect_head_and_shoulders(df) + detect_flags(df)
             
             try:
-            try:
                 for date, pattern_name in patterns:
                     if date in df.index:
                         price = df.loc[date]['High']
