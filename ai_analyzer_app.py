@@ -16,17 +16,15 @@ def get_latest_prices(tickers):
 def calculate_target_price(price, percent):
     return round(price * (1 + percent / 100), 2)
 
-# Symbols for Top 10
+# Top 10 data
 stock_symbols = ["AAPL", "TSLA", "NVDA", "MSFT", "META", "GOOGL", "AMZN", "CRM", "NFLX", "INTC"]
 crypto_symbols = ["BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD", "ADA-USD", "XRP-USD", "DOGE-USD", "DOT-USD", "AVAX-USD", "MATIC-USD"]
-
-# Fetch latest prices
 all_symbols = stock_symbols + crypto_symbols
 prices = get_latest_prices(all_symbols)
 
 # STOCK TABLE
 st.subheader("📈 Top 10 Forecasted Stocks")
-stock_data = {
+stock_df = pd.DataFrame({
     "Symbol": stock_symbols,
     "Name": ["Apple", "Tesla", "NVIDIA", "Microsoft", "Meta", "Google", "Amazon", "Salesforce", "Netflix", "Intel"],
     "Current Price": [prices[s] for s in stock_symbols],
@@ -45,15 +43,14 @@ stock_data = {
         "תבנית כוס עם ידית בבנייה + צפי לשבירת שיאים.",
         "MACD עולה בתיאום עם קפיצה משמעותית במחזור."
     ]
-}
-stock_df = pd.DataFrame(stock_data)
+})
 stock_df["Target Price"] = stock_df.apply(lambda row: calculate_target_price(row["Current Price"], row["Predicted Change (%)"]), axis=1)
 cols = ["Symbol", "Name", "Current Price", "Predicted Change (%)", "Target Price", "Target Time", "Confidence", "Forecast Explanation (Hebrew)"]
 st.dataframe(stock_df[cols])
 
 # CRYPTO TABLE
 st.subheader("💹 Top 10 Forecasted Cryptocurrencies")
-crypto_data = {
+crypto_df = pd.DataFrame({
     "Symbol": crypto_symbols,
     "Name": ["Bitcoin", "Ethereum", "Solana", "BNB", "Cardano", "Ripple", "Dogecoin", "Polkadot", "Avalanche", "Polygon"],
     "Current Price": [prices[s] for s in crypto_symbols],
@@ -72,12 +69,11 @@ crypto_data = {
         "תבנית ראש וכתפיים הפוכה + עליה במחזור.",
         "קרוס ממוצע נע מעלה + עניין גובר בשוק."
     ]
-}
-crypto_df = pd.DataFrame(crypto_data)
+})
 crypto_df["Target Price"] = crypto_df.apply(lambda row: calculate_target_price(row["Current Price"], row["Predicted Change (%)"]), axis=1)
 st.dataframe(crypto_df[cols])
 
-# ANALYZE SPECIFIC ASSET
+# Analyze Specific Asset
 st.markdown("## 🔍 Analyze a Specific Asset")
 symbol = st.text_input("Enter a stock or crypto symbol (e.g. AAPL, BTC-USD):", value="AAPL")
 period = st.selectbox("Select time period:", ["1mo", "3mo", "6mo", "1y", "2y"], index=2)
@@ -87,7 +83,16 @@ if symbol:
         df = fetch_price_history(symbol, period=period)
         df = detect_trade_signals(df)
 
+        # Fix types
+        df = df.copy()
+        df.index = pd.to_datetime(df.index)
+        for col in ["Open", "High", "Low", "Close"]:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
         if not df.empty:
+            st.write("📊 Sample data for debugging:")
+            st.write(df.tail())
+
             fig = go.Figure(data=[
                 go.Candlestick(
                     x=df.index,
